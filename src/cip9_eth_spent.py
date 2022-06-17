@@ -20,4 +20,5 @@ def fetch_eth_spent(dune: DuneAPI):
 
 if __name__ == "__main__":
     dune_conn = DuneAPI.new_from_environment()
+    print("Getting ETH Spent on Fee subsidies from: https://dune.com/queries/529638")
     fetch_eth_spent(dune_conn)
