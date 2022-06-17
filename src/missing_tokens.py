@@ -52,8 +52,11 @@ if __name__ == "__main__":
     dune_conn = DuneAPI.new_from_environment()
     print("Getting missing tokens from: https://dune.com/queries/236085")
     missing_tokens = fetch_missing_tokens(dune_conn)
-    print(f"Found {len(missing_tokens)} missing tokens, fetching metadata...")
-    # TODO batch the eth_calls used to construct the token contracts.
-    token_details = [str(TokenDetails(address=t)) for t in missing_tokens]
-    print("\n".join(token_details))
+    if missing_tokens:
+        print(f"Found {len(missing_tokens)} missing tokens, fetching metadata...")
+        # TODO batch the eth_calls used to construct the token contracts.
+        token_details = [str(TokenDetails(address=t)) for t in missing_tokens]
+        print("\n".join(token_details))
+    else:
+        print("No missing tokens detected. Have a good day!")
 
