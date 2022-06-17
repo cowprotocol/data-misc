@@ -12,7 +12,6 @@ from src.constants import ERC20_ABI
 
 
 class TokenDetails:
-
     def __init__(self, address: Address):
         self.address = address.address
         token_contract = w3.eth.contract(
@@ -25,11 +24,7 @@ class TokenDetails:
 
     def __str__(self):
         address_bytea = f"\\\\x{self.address[2:]}"
-        return "	".join([
-            address_bytea,
-            self.symbol,
-            str(self.decimals)
-        ])
+        return "	".join([address_bytea, self.symbol, str(self.decimals)])
 
 
 def fetch_missing_tokens(dune: DuneAPI) -> list[Address]:
@@ -59,4 +54,3 @@ if __name__ == "__main__":
         print("\n".join(token_details))
     else:
         print("No missing tokens detected. Have a good day!")
-
