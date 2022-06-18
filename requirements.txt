@@ -1,1 +1,2 @@
 duneapi==3.0.7
+PyYAML==6.0
