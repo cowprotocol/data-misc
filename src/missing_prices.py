@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import os
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -26,13 +28,28 @@ yaml.add_representer(HexInt, representer)
 
 
 def load_coins() -> dict[str, list[dict]]:
-    entries = requests.get("https://api.coinpaprika.com/v1/coins").json()
+    entries = requests.get(
+        url="https://api.coinpaprika.com/v1/coins", timeout=10
+    ).json()
     coin_dict = defaultdict(list)
     for entry in entries:
         if entry["type"] == "token" and entry["is_active"] and not entry["is_new"]:
             # only include ethereum tokens
             coin_dict[entry["symbol"]].append(entry)
     return coin_dict
+
+
+def write_results(results: list[dict], path: str, filename: str):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    with open(os.path.join(path, filename), "w") as yaml_file:
+        yaml.dump(
+            data=results,
+            stream=yaml_file,
+            default_flow_style=False,
+            sort_keys=False
+        )
+        print(f"Results written to {filename}")
 
 
 @dataclass
@@ -84,12 +101,14 @@ def fetch_tokens_without_prices(dune: DuneAPI) -> list[Token]:
 
 
 if __name__ == "__main__":
+    print("Getting Coin Paprika token list")
     coins = load_coins()
     print(f"Loaded {len(coins)} coins from Coin Paprika")
 
     # Fetch tokens orders by descending, popularity
     print("Getting traded tokens without prices from: https://dune.com/queries/224239")
     tokens = sorted(
+        # Could be interesting to just get the results without executing.
         fetch_tokens_without_prices(dune=DuneAPI.new_from_environment()),
         key=lambda t: t.popularity,
         reverse=True,
@@ -98,14 +117,14 @@ if __name__ == "__main__":
     found, res = 0, []
     for token in tokens:
         if token.symbol in coins:
-            possible_tokens = coins[token.symbol]
-            if len(possible_tokens) == 1:
-                res.append(token.coin_paprika_rep(possible_tokens[0]["id"]))
+            possibilities = coins[token.symbol]
+            if len(possibilities) == 1:
+                res.append(token.coin_paprika_rep(possibilities[0]["id"]))
                 found += 1
             else:
-                print("Token not uniquely identifiable!", token, possible_tokens)
+                print(f"non unique {token}: {len(possibilities)} occurrences")
         if found > 50:
+            print("Stopped at 50 results.")
             break
 
-    with open("../out/result.yaml", "w") as yaml_file:
-        yaml.dump(res, yaml_file, default_flow_style=False, sort_keys=False)
+    write_results(results=res, path="./out", filename="missing-prices.yaml")
