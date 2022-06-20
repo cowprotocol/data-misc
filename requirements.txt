@@ -1,1 +1,3 @@
 duneapi==3.0.7
+python-dotenv==0.20.0
+web3==5.29.2
