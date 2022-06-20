@@ -87,19 +87,21 @@ blockwise_discount as (
 ),
 
 fee_discounts as (
-    select
+    select distinct on (order_uid)
         trader,
         block_time,
-        max(evt_block_time) balance_from,
+        evt_block_time as balance_from,
         fee_usd as fee_paid,
         discount
     from gnosis_protocol_v2."trades" t
-    join blockwise_discount
+    inner join blockwise_discount
         on account = trader
         and evt_block_time < block_time
+    -- This is the transaction where we got the block time and block number being used immediately below.
+    -- Specifically the transaction where the 60 ETH was transferred.
     -- https://etherscan.io/tx/0x1100cd4a50a2c224ec39f861aef7574df394edb2b5ed850705cf0bb34f6a300d
     where block_time > '2022-03-28 14:19' -- number = 14475154
-    group by trader, block_time, fee_usd, discount
+    order by order_uid, evt_block_time desc
 ),
 
 -- feePaid = fullFee * (1 - discount)
