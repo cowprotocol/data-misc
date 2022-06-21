@@ -87,7 +87,7 @@ blockwise_discount as (
 ),
 
 fee_discounts as (
-    select distinct on (order_uid)
+    select distinct on (order_uid, block_time)
         trader,
         block_time,
         evt_block_time as balance_from,
@@ -101,7 +101,7 @@ fee_discounts as (
     -- Specifically the transaction where the 60 ETH was transferred.
     -- https://etherscan.io/tx/0x1100cd4a50a2c224ec39f861aef7574df394edb2b5ed850705cf0bb34f6a300d
     where block_time > '2022-03-28 14:19' -- number = 14475154
-    order by order_uid, evt_block_time desc
+    order by order_uid, block_time, evt_block_time desc
 ),
 
 -- feePaid = fullFee * (1 - discount)
