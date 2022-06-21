@@ -12,7 +12,6 @@ from src.constants import ERC20_ABI
 
 
 class TokenDetails:
-
     def __init__(self, address: Address):
         self.address = address.address
         token_contract = w3.eth.contract(
@@ -55,4 +54,3 @@ if __name__ == "__main__":
         print("\n".join(token_details))
     else:
         print("No missing tokens detected. Have a good day!")
-
