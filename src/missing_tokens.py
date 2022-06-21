@@ -25,11 +25,7 @@ class TokenDetails:
 
     def __str__(self):
         address_bytea = f"\\\\x{self.address[2:]}"
-        return "	".join([
-            address_bytea,
-            self.symbol,
-            str(self.decimals)
-        ])
+        return f"{address_bytea}\t{self.symbol}\t{self.decimals}"
 
 
 def fetch_missing_tokens(dune: DuneAPI) -> list[Address]:
