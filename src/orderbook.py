@@ -1,4 +1,7 @@
 import pandas as pds
+from duneapi.api import DuneAPI
+from duneapi.types import DuneQuery, Network
+import numpy as np
 from sqlalchemy import (
     Table,
     Column,
@@ -16,10 +19,9 @@ from sqlalchemy.engine import LegacyCursorResult
 from sqlalchemy.ext.declarative import declarative_base
 from src.db.pg_client import pg_engine
 
-
-Base = declarative_base()
-
-
+pds.options.display.max_colwidth = None
+pds.options.display.max_columns = None
+# Base = declarative_base()
 # class Trade(Base):
 #     __tablename__ = "trades"
 #
@@ -40,12 +42,12 @@ Base = declarative_base()
 #     owner = Column("owner", BigInteger)
 
 
-def bin_str(bin: memoryview) -> str:
-    return "0x" + bin.hex()
+def bin_str(bytea: memoryview) -> str:
+    return "0x" + bytea.hex()
 
 
 def pandas_query(db: engine):
-    print("Pandas")
+    print("Pandas: Basic")
     df = pds.read_sql("select * from invalidations", db)
     for uid in df.order_uid:
         print(bin_str(uid))
@@ -71,7 +73,7 @@ def sql_alchemy_basic(db: engine):
 
 
 def sql_alchemy_advanced(db: engine):
-
+    print("Advanced: SQL Alchemy")
     meta = MetaData(db)
     trades = Table(
         "trades",
@@ -121,9 +123,85 @@ def sql_alchemy_advanced(db: engine):
         for rec in worst_first:
             print(bin_str(rec.owner), rec.failed, rec.success, rec.failed / rec.success)
 
+    raw_query = """
+        with
+    pre_table as (
+        select concat('0x', encode(orders.owner, 'hex')) as trader,
+            sum(case when trades.block_number is null then 1 else 0 end) as num_failed,
+            sum(case when trades.block_number is not null then 1 else 0 end) as num_success
+        from orders
+        left outer join trades
+        on order_uid = uid
+        group by trader
+    )
+    
+    select * from pre_table
+    where num_success > 20
+    and num_failed > num_success"""
+
+    print("Now querying with raw sql")
+    with db.connect() as conn:
+        result_set: LegacyCursorResult = conn.execute(raw_query)
+        print(f"Found {len(result_set.all())} with raw query")
+
+
+def order_fill_time(db: engine, dune=None):
+    print("Pandas: Advanced")
+    orderbook_query = """
+    select concat('\\x', encode(uid, 'hex')) as uid, date_trunc('second', creation_timestamp) as creation_timestamp 
+    from trades
+        join orders on uid = order_uid
+    where creation_timestamp > now() - interval '3 months'
+    and is_liquidity_order = false
+    and partially_fillable = false
+    
+    """
+    creation_df = pds.read_sql(orderbook_query, db)
+    dune_query = """
+    select order_uid, block_time from gnosis_protocol_v2."trades"
+    where block_time > now() - interval '3 months'
+    """
+    query = DuneQuery.from_environment(
+        raw_sql=dune_query,
+        name="",
+        network=Network.MAINNET,
+        parameters=[],
+    )
+    settlement_df = pds.DataFrame(DuneAPI.new_from_environment().fetch(query))
+
+    joined_df = pds.merge(
+        creation_df, settlement_df, how="inner", left_on="uid", right_on="order_uid"
+    )
+    # print("Creation records", len(creation_df))
+    # print("Settlement records", len(settlement_df))
+    # print("Joined", len(joined_df))
+    # print(joined_df[["creation_timestamp", "block_time"]].head(10))
+
+    start = pds.to_datetime(joined_df.creation_timestamp)
+    end = pds.to_datetime(joined_df.block_time)
+    joined_df["wait_time"] = (end - start) / np.timedelta64(1, 'm')  #.dt.seconds / 60
+    # print(joined_df.columns)
+    sorted_df = joined_df.sort_values(by=["wait_time"], ascending=False)
+    print(
+        sorted_df[["order_uid", "creation_timestamp", "block_time", "wait_time"]].head(
+            10
+        )
+    )
+
+    print(
+        sorted_df[["order_uid", "creation_timestamp", "block_time", "wait_time"]].tail(
+            10
+        )
+    )
+    print(
+        "Average Wait time (minutes):",
+        sum(joined_df["wait_time"]) / len(joined_df)
+    )
+
 
 if __name__ == "__main__":
     db_engine = pg_engine()
-    sql_alchemy_basic(db_engine)
+    # sql_alchemy_basic(db_engine)
     # pandas_query(db_engine)
-    sql_alchemy_advanced(db_engine)
+    # sql_alchemy_advanced(db_engine)
+    order_fill_time(db_engine)
