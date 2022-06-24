@@ -15,6 +15,8 @@ from sqlalchemy import (
     case,
 )
 import time
+
+# TODO - I find it strange that LegacyCursor is still being returned...
 from sqlalchemy.engine import LegacyCursorResult
 from src.db.pg_client import pg_engine
 
@@ -181,31 +183,25 @@ def order_fill_time(db: engine, dune: DuneAPI):
     joined_df = pds.merge(
         creation_df, settlement_df, how="inner", left_on="uid", right_on="order_uid"
     )
-    # print("Creation records", len(creation_df))
-    # print("Settlement records", len(settlement_df))
-    # print("Joined", len(joined_df))
-    # print(joined_df[["creation_timestamp", "block_time"]].head(10))
 
     start = pds.to_datetime(joined_df.creation_timestamp)
     end = pds.to_datetime(joined_df.block_time)
-    joined_df["wait_time_minutes"] = (end - start) / np.timedelta64(
-        1, "m"
-    )  # .dt.seconds / 60
-    # print(joined_df.columns)
-    sorted_df = joined_df.sort_values(by=["wait_time_minutes"], ascending=False)
+    joined_df["wait_time"] = (end - start) / np.timedelta64(1, "s")  # .dt.seconds / 60
+    sorted_df = joined_df.sort_values(by=["wait_time"], ascending=False)
     # Exclude negative wait times (two different clocks)
-    sorted_df = sorted_df[sorted_df.wait_time_minutes > 0]
+    sorted_df = sorted_df[sorted_df.wait_time > 0]
     print("Longest 10 wait times")
-    print(sorted_df[["order_uid", "block_time", "wait_time_minutes"]].head(10))
+    print(sorted_df[["order_uid", "block_time", "wait_time"]].head(10))
     print("Shortest 10 wait times")
-    print(sorted_df[["order_uid", "block_time", "wait_time_minutes"]].tail(10))
-    print(sorted_df["wait_time_minutes"].describe())
+    print(sorted_df[["order_uid", "block_time", "wait_time"]].tail(10))
+    print(sorted_df["wait_time"].describe())
 
 
 if __name__ == "__main__":
     db_engine = pg_engine()
-    # sql_alchemy_basic(db_engine)
-    # pandas_query(db_engine)
-    # sql_alchemy_advanced(db_engine)
+    sql_alchemy_basic(db_engine)
+    pandas_query(db_engine)
+    sql_alchemy_advanced(db_engine)
+
     dune_connection = DuneAPI.new_from_environment()
     order_fill_time(db_engine, dune_connection)
