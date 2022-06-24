@@ -2,6 +2,7 @@ import pandas as pds
 from duneapi.api import DuneAPI
 from duneapi.types import DuneQuery, Network
 import numpy as np
+from pandas import DataFrame
 from sqlalchemy import (
     Table,
     Column,
@@ -9,37 +10,28 @@ from sqlalchemy import (
     BigInteger,
     LargeBinary,
     engine,
-    ForeignKey,
-    PrimaryKeyConstraint,
     select,
     func,
     case,
 )
+import time
 from sqlalchemy.engine import LegacyCursorResult
-from sqlalchemy.ext.declarative import declarative_base
 from src.db.pg_client import pg_engine
 
 pds.options.display.max_colwidth = None
 pds.options.display.max_columns = None
-# Base = declarative_base()
-# class Trade(Base):
-#     __tablename__ = "trades"
-#
-#     order_uid = Column("order_uid", LargeBinary, ForeignKey("orders.uid"))
-#     block_number = Column("block_number", BigInteger)
-#     log_index = Column("log_index", BigInteger)
-#
-#     __table_args__ = (
-#         PrimaryKeyConstraint(block_number, log_index),
-#         {},
-#     )
-#
-#
-# class Order(Base):
-#     __tablename__ = "orders"
-#
-#     uid = Column("uid", LargeBinary, primary_key=True)
-#     owner = Column("owner", BigInteger)
+
+
+def timeit(f):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = f(*args, **kw)
+        te = time.time()
+
+        print("  func:%r took: %2.4f sec" % (f.__name__, te - ts))
+        return result
+
+    return timed
 
 
 def bin_str(bytea: memoryview) -> str:
@@ -65,7 +57,6 @@ def sql_alchemy_basic(db: engine):
     )
 
     with db.connect() as conn:
-
         select_statement = invalidation_table.select()
         result_set: LegacyCursorResult = conn.execute(select_statement)
         for r in result_set:
@@ -145,29 +136,47 @@ def sql_alchemy_advanced(db: engine):
         print(f"Found {len(result_set.all())} with raw query")
 
 
-def order_fill_time(db: engine, dune=None):
-    print("Pandas: Advanced")
-    orderbook_query = """
-    select concat('\\x', encode(uid, 'hex')) as uid, date_trunc('second', creation_timestamp) as creation_timestamp 
-    from trades
-        join orders on uid = order_uid
-    where creation_timestamp > now() - interval '3 months'
-    and is_liquidity_order = false
-    and partially_fillable = false
-    
-    """
-    creation_df = pds.read_sql(orderbook_query, db)
-    dune_query = """
-    select order_uid, block_time from gnosis_protocol_v2."trades"
-    where block_time > now() - interval '3 months'
-    """
+@timeit
+def query_dune(dune: DuneAPI, raw_query: str) -> DataFrame:
     query = DuneQuery.from_environment(
-        raw_sql=dune_query,
+        raw_sql=raw_query,
         name="",
         network=Network.MAINNET,
         parameters=[],
     )
-    settlement_df = pds.DataFrame(DuneAPI.new_from_environment().fetch(query))
+    print("Querying Dune")
+    results = pds.DataFrame(dune.fetch(query))
+    print(f"Got {len(results)} results")
+    return results
+
+
+@timeit
+def query_orderbook(db: engine, raw_query: str) -> DataFrame:
+    print("Querying orderbook")
+    results = pds.read_sql(raw_query, db)
+    print(f"Got {len(results)} results")
+    return results
+
+
+def order_fill_time(db: engine, dune: DuneAPI):
+    print("Pandas: Advanced")
+    orderbook_query = """
+    select encode(uid, 'hex') as uid, date_trunc('second', creation_timestamp) as creation_timestamp 
+    from trades
+        join orders on uid = order_uid
+    -- where creation_timestamp > now() - interval '3 months'
+    where is_liquidity_order = false
+    and partially_fillable = false
+    -- Validity < 1 hour.
+    and EXTRACT(EPOCH FROM to_timestamp(valid_to)::timestamptz - creation_timestamp) < 60 * 60
+    """
+    creation_df = query_orderbook(db, orderbook_query)
+
+    dune_query = """
+    select encode(order_uid, 'hex') as order_uid, block_time from gnosis_protocol_v2."trades"
+    -- where block_time > now() - interval '3 months'
+    """
+    settlement_df = query_dune(dune, dune_query)
 
     joined_df = pds.merge(
         creation_df, settlement_df, how="inner", left_on="uid", right_on="order_uid"
@@ -179,24 +188,18 @@ def order_fill_time(db: engine, dune=None):
 
     start = pds.to_datetime(joined_df.creation_timestamp)
     end = pds.to_datetime(joined_df.block_time)
-    joined_df["wait_time"] = (end - start) / np.timedelta64(1, 'm')  #.dt.seconds / 60
+    joined_df["wait_time_minutes"] = (end - start) / np.timedelta64(
+        1, "m"
+    )  # .dt.seconds / 60
     # print(joined_df.columns)
-    sorted_df = joined_df.sort_values(by=["wait_time"], ascending=False)
-    print(
-        sorted_df[["order_uid", "creation_timestamp", "block_time", "wait_time"]].head(
-            10
-        )
-    )
-
-    print(
-        sorted_df[["order_uid", "creation_timestamp", "block_time", "wait_time"]].tail(
-            10
-        )
-    )
-    print(
-        "Average Wait time (minutes):",
-        sum(joined_df["wait_time"]) / len(joined_df)
-    )
+    sorted_df = joined_df.sort_values(by=["wait_time_minutes"], ascending=False)
+    # Exclude negative wait times (two different clocks)
+    sorted_df = sorted_df[sorted_df.wait_time_minutes > 0]
+    print("Longest 10 wait times")
+    print(sorted_df[["order_uid", "block_time", "wait_time_minutes"]].head(10))
+    print("Shortest 10 wait times")
+    print(sorted_df[["order_uid", "block_time", "wait_time_minutes"]].tail(10))
+    print(sorted_df["wait_time_minutes"].describe())
 
 
 if __name__ == "__main__":
@@ -204,4 +207,5 @@ if __name__ == "__main__":
     # sql_alchemy_basic(db_engine)
     # pandas_query(db_engine)
     # sql_alchemy_advanced(db_engine)
-    order_fill_time(db_engine)
+    dune_connection = DuneAPI.new_from_environment()
+    order_fill_time(db_engine, dune_connection)
