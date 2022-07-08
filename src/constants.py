@@ -1,9 +1,6 @@
-import json
-
-ERC20_ABI = json.loads(
-    """[
+ERC20_ABI = [
   {
-    "constant": true,
+    "constant": True,
     "inputs": [],
     "name": "decimals",
     "outputs": [
@@ -12,12 +9,12 @@ ERC20_ABI = json.loads(
         "type": "uint8"
       }
     ],
-    "payable": false,
+    "payable": False,
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "constant": true,
+    "constant": True,
     "inputs": [],
     "name": "symbol",
     "outputs": [
@@ -26,9 +23,8 @@ ERC20_ABI = json.loads(
         "type": "string"
       }
     ],
-    "payable": false,
+    "payable": False,
     "stateMutability": "view",
     "type": "function"
   }
-]"""
-)
+]

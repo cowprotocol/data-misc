@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     token_file = File(args.token_file) if args.token_file else None
     # We only supply a token file for Dune V2.
-    dune_version = DuneVersion(1) if not token_file else DuneVersion(2)
+    dune_version = DuneVersion.V1 if not token_file else DuneVersion.V2
 
     w3 = Web3(
         Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}")
