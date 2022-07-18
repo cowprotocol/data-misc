@@ -38,7 +38,7 @@ class TokenDetails:
             address_bytea = f"\\\\x{self.address[2:]}"
             return f"{address_bytea}\t{self.symbol}\t{self.decimals}"
         if version == DuneVersion.V2:
-            return f"('{self.address.lower()}', '{self.symbol}', {self.decimals})"
+            return f"('{self.address.lower()}', '{self.symbol}', {self.decimals}),"
         raise ValueError(f"Invalid DuneVersion {version}")
 
 
@@ -89,6 +89,6 @@ if __name__ == "__main__":
                 token_details.append(TokenDetails(address=t).to_str(dune_version))
             except web3.exceptions.BadFunctionCallOutput as err:
                 print(f"Something wrong with token {t} - skipping.")
-        print(",\n".join(token_details))
+        print("\n".join(token_details))
     else:
         print("No missing tokens detected. Have a good day!")
