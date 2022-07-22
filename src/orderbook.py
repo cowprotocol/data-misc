@@ -186,7 +186,7 @@ def order_fill_time(db: engine, dune: DuneAPI):
 
     start = pds.to_datetime(joined_df.creation_timestamp)
     end = pds.to_datetime(joined_df.block_time)
-    joined_df["wait_time"] = (end - start) / np.timedelta64(1, "s")  # .dt.seconds / 60
+    joined_df["wait_time"] = (end - start).dt.seconds * 60  # / np.timedelta64(1, "s")  # .dt.seconds / 60
     sorted_df = joined_df.sort_values(by=["wait_time"], ascending=False)
     # Exclude negative wait times (two different clocks)
     sorted_df = sorted_df[sorted_df.wait_time > 0]
@@ -199,9 +199,9 @@ def order_fill_time(db: engine, dune: DuneAPI):
 
 if __name__ == "__main__":
     db_engine = pg_engine()
-    sql_alchemy_basic(db_engine)
-    pandas_query(db_engine)
-    sql_alchemy_advanced(db_engine)
+    # sql_alchemy_basic(db_engine)
+    # pandas_query(db_engine)
+    # sql_alchemy_advanced(db_engine)
 
     dune_connection = DuneAPI.new_from_environment()
     order_fill_time(db_engine, dune_connection)
