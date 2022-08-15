@@ -4,7 +4,7 @@ Follow examples provided in base dependency [duneapi](https://github.com/bh2smit
 
 ```sh
 python3 -m venv venv
-source ./env/bin/activate
+source ./venv/bin/activate
 pip install -r requirements.txt
 cp .env.sample .env       <----- Copy your Dune credentials here!
 ```
