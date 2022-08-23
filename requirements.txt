@@ -1,4 +1,4 @@
-duneapi==3.0.7
+duneapi==4.0.0
 python-dotenv==0.20.0
 PyYAML==6.0
 requests==2.28.0
@@ -7,3 +7,4 @@ web3==5.29.2
 psycopg2==2.9.3
 SQLAlchemy==1.4.37
 pandas==1.4.3
+click==8.1.3

@@ -1,4 +1,4 @@
-import pandas as pds
+import pandas as pd
 from duneapi.api import DuneAPI
 from duneapi.types import DuneQuery, Network
 import numpy as np
@@ -20,8 +20,8 @@ import time
 from sqlalchemy.engine import LegacyCursorResult
 from src.db.pg_client import pg_engine
 
-pds.options.display.max_colwidth = None
-pds.options.display.max_columns = None
+pd.options.display.max_colwidth = None
+pd.options.display.max_columns = None
 
 
 def timeit(f):
@@ -42,7 +42,7 @@ def bin_str(bytea: memoryview) -> str:
 
 def pandas_query(db: engine):
     print("Pandas: Basic")
-    df = pds.read_sql("select * from invalidations", db)
+    df = pd.read_sql("select * from invalidations", db)
     for uid in df.order_uid:
         print(bin_str(uid))
 
@@ -147,7 +147,7 @@ def query_dune(dune: DuneAPI, raw_query: str) -> DataFrame:
         parameters=[],
     )
     print("Querying Dune")
-    results = pds.DataFrame(dune.fetch(query))
+    results = pd.DataFrame(dune.fetch(query))
     print(f"Got {len(results)} results")
     return results
 
@@ -155,7 +155,7 @@ def query_dune(dune: DuneAPI, raw_query: str) -> DataFrame:
 @timeit
 def query_orderbook(db: engine, raw_query: str) -> DataFrame:
     print("Querying orderbook")
-    results = pds.read_sql(raw_query, db)
+    results = pd.read_sql(raw_query, db)
     print(f"Got {len(results)} results")
     return results
 
@@ -180,12 +180,12 @@ def order_fill_time(db: engine, dune: DuneAPI):
     """
     settlement_df = query_dune(dune, dune_query)
 
-    joined_df = pds.merge(
+    joined_df = pd.merge(
         creation_df, settlement_df, how="inner", left_on="uid", right_on="order_uid"
     )
 
-    start = pds.to_datetime(joined_df.creation_timestamp)
-    end = pds.to_datetime(joined_df.block_time)
+    start = pd.to_datetime(joined_df.creation_timestamp)
+    end = pd.to_datetime(joined_df.block_time)
     joined_df["wait_time"] = (end - start).dt.seconds * 60  # / np.timedelta64(1, "s")  # .dt.seconds / 60
     sorted_df = joined_df.sort_values(by=["wait_time"], ascending=False)
     # Exclude negative wait times (two different clocks)
