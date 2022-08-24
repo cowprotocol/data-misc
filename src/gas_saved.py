@@ -26,6 +26,8 @@ def main(batch_tx_hash):
       solver_competitions.tx_hash = '\\{batch_tx_hash[1:]}'
     """
     df_quotes = pd.read_sql(GAS_QUOTES_QUERY, db_engine)
+    # substract settlement_overhead Ref: https://cowservices.slack.com/archives/D03N1R15LNQ/p1661267135582219?thread_ts=1661257111.988999&cid=D03N1R15LNQ
+    df_quotes["gas_amount"] = df_quotes["gas_amount"].apply(lambda x: x - 106391)
     load_dotenv()
     w3 = Web3(
         Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}")
@@ -37,7 +39,7 @@ def main(batch_tx_hash):
     print(f"Batch only used {tx.gasUsed} gas.")
     print(
         f"This resulted in {df_quotes['gas_amount'].sum() - tx.gasUsed:.0f} absolute gas saved and "
-        f"{(tx.gasUsed / df_quotes['gas_amount'].sum()) * 100:.2f}% decrease of gas."
+        f"{((df_quotes['gas_amount'].sum() - tx.gasUsed) / df_quotes['gas_amount'].sum()) * 100:.2f}% decrease of gas."
     )
     return 0
 
