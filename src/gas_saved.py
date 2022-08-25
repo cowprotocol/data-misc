@@ -26,7 +26,8 @@ def main(batch_tx_hash):
       solver_competitions.tx_hash = '\\{batch_tx_hash[1:]}'
     """
     df_quotes = pd.read_sql(GAS_QUOTES_QUERY, db_engine)
-    # substract settlement_overhead Ref: https://cowservices.slack.com/archives/D03N1R15LNQ/p1661267135582219?thread_ts=1661257111.988999&cid=D03N1R15LNQ
+    # subtract settlement_overhead from price estimation
+    # Ref: https://github.com/cowprotocol/services/blob/fd5f7cf47a6afdff89b310b60b869dfc577ac7a7/crates/shared/src/price_estimation/gas.rs#L37
     df_quotes["gas_amount"] = df_quotes["gas_amount"].apply(lambda x: x - 106391)
     load_dotenv()
     w3 = Web3(
