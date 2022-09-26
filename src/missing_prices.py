@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import json
 import os
 from collections import defaultdict
 from dataclasses import dataclass
@@ -27,28 +29,41 @@ yaml.add_representer(HexInt, representer)
 # End Hack
 
 
-def load_coins() -> dict[str, list[dict]]:
+def load_coins() -> dict[str, dict]:
+    entries = requests.get(
+        url="https://api.coinpaprika.com/v1/contracts/eth-ethereum", timeout=10
+    ).json()
+    contract_dict = {}
+    for entry in entries:
+        if entry["type"] == "ERC20" and entry["active"]:
+            # only include ethereum tokens
+            contract_dict[entry["id"]] = entry["address"]
+
     entries = requests.get(
         url="https://api.coinpaprika.com/v1/coins", timeout=10
     ).json()
-    coin_dict = defaultdict(list)
+    coin_dict = {}
+    missed = 0
     for entry in entries:
-        if entry["type"] == "token" and entry["is_active"] and not entry["is_new"]:
+        if entry["type"] == "token" and entry["is_active"]:
             # only include ethereum tokens
-            coin_dict[entry["symbol"]].append(entry)
+            try:
+                entry["address"] = contract_dict[entry["id"]].lower()
+                coin_dict[entry["address"]] = entry
+            except KeyError as err:
+                missed += 1
+                # print(f"Error with {err}, excluding entry {entry}")
+
+    print(f"Excluded address for {missed} entries out of {len(entries)}")
     return coin_dict
 
 
-def write_results(results: list[dict], path: str, filename: str):
+def write_results(results: list[tuple], path: str, filename: str):
     if not os.path.exists(path):
         os.makedirs(path)
-    with open(os.path.join(path, filename), "w") as yaml_file:
-        yaml.dump(
-            data=results,
-            stream=yaml_file,
-            default_flow_style=False,
-            sort_keys=False
-        )
+    with open(os.path.join(path, filename), "w") as file:
+        for row in results:
+            file.write(str(row) + ",\n")
         print(f"Results written to {filename}")
 
 
@@ -88,6 +103,12 @@ class Token:
         }
 
 
+def load_tokens(path: str):
+    with open(path, encoding="utf-8") as csv_f:
+        reader = csv.DictReader(csv_f)
+        return [row for row in reader]
+
+
 def fetch_tokens_without_prices(dune: DuneAPI) -> list[Token]:
     """Initiates and executes Dune query for affiliate out on given month"""
     query = DuneQuery.from_environment(
@@ -105,26 +126,20 @@ if __name__ == "__main__":
     coins = load_coins()
     print(f"Loaded {len(coins)} coins from Coin Paprika")
 
-    # Fetch tokens orders by descending, popularity
-    print("Getting traded tokens without prices from: https://dune.com/queries/224239")
-    tokens = sorted(
-        # Could be interesting to just get the results without executing.
-        fetch_tokens_without_prices(dune=DuneAPI.new_from_environment()),
-        key=lambda t: t.popularity,
-        reverse=True,
-    )
+    tokens = load_tokens("out/missing-token-prices.csv")
     print(f"Fetched {len(tokens)} traded tokens from Dune without prices")
     found, res = 0, []
     for token in tokens:
-        if token.symbol in coins:
-            possibilities = coins[token.symbol]
-            if len(possibilities) == 1:
-                res.append(token.coin_paprika_rep(possibilities[0]["id"]))
-                found += 1
-            else:
-                print(f"non unique {token}: {len(possibilities)} occurrences")
-        if found > 50:
-            print("Stopped at 50 results.")
-            break
-
-    write_results(results=res, path="./out", filename="missing-prices.yaml")
+        if token["address"].lower() in coins:
+            paprika_data = coins[token["address"].lower()]
+            dune_row = (
+                paprika_data["id"],
+                "ethereum",
+                paprika_data["symbol"],
+                paprika_data["address"].lower(),
+                int(token["decimals"]),
+            )
+            res.append(dune_row)
+            found += 1
+    print(f"Found {found} matches")
+    write_results(results=res, path="./out", filename="missing-prices.txt")
