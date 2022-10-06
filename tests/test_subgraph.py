@@ -4,7 +4,8 @@ from src.subgraph.ens_data import get_names_for_wallets
 
 
 class MyTestCase(unittest.TestCase):
-    def test_ens_data_fetching(self):
+    @unittest.skip("Test is too large (used to validate partitioning)")
+    def test_ens_data_large(self):
         expected_ens_records = {
             "0x75f0e91e9cbbdac4ca253c0939f6d149fe4397ff": [
                 "retirementlife.eth",
@@ -468,8 +469,13 @@ class MyTestCase(unittest.TestCase):
                 "zknames.eth",
                 "tokenlaw.eth",
             ],
-            "0xa7b7f3550f9b9611d12d6cf9e58fdbe63b7c4f86": ["guccimain.eth"],
-            "0x1638e6e26f49c3b9ee48c03daf1097968c837851": ["vault.musa.eth"],
+        }
+        results = get_names_for_wallets(set(expected_ens_records.keys()), 15687500)
+        for wallet, names in expected_ens_records.items():
+            self.assertEqual(results[wallet], names, f"failed for wallet {wallet}")
+
+    def test_ens_data_small(self):
+        expected_ens_records = {
             "0xb428396d64b0a36c7765da55f64a6b2538d29589": ["knashi.eth"],
             "0xfdb7b75c8b21c03a3b8fabfabd0f6b9ba055cfab": ["0xobat.eth", "obatolo.eth"],
             "0x4e3c585aa99818552d23dced9e02876dbc74ef3b": [
@@ -478,7 +484,7 @@ class MyTestCase(unittest.TestCase):
                 "millenialmoney.eth",
             ],
         }
-        results = get_names_for_wallets(set(expected_ens_records.keys()))
+        results = get_names_for_wallets(set(expected_ens_records.keys()), 15687500)
         for wallet, names in expected_ens_records.items():
             self.assertEqual(results[wallet], names, f"failed for wallet {wallet}")
 

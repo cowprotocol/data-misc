@@ -12,7 +12,10 @@ class MyTestCase(unittest.TestCase):
 
     def tearDown(self) -> None:
         # Remove test file directory
-        shutil.rmtree(self.path)
+        try:
+            shutil.rmtree(self.path)
+        except FileNotFoundError as err:
+            print(err)
 
     def test_partition_array(self):
         self.assertEqual(partition_array([1, 2, 3, 4], 2), [[1, 2], [3, 4]])
