@@ -12,7 +12,7 @@ def write_to_json(results: dict[any, any], path: str, filename: str):
     if not os.path.exists(path):
         os.makedirs(path)
     with open(os.path.join(path, filename), "w", encoding="utf-8") as file:
-        file.write(json.dumps(results, indent=2))
+        json.dump(results, file, indent=2, ensure_ascii=False)
         print(f"Results written to {filename}")
 
 

@@ -1,16 +1,33 @@
 import argparse
 import datetime
+import os
 from enum import Enum
 
 from dotenv import load_dotenv
 from duneapi.api import DuneAPI
 from duneapi.types import DuneQuery, Network, QueryParameter
 from duneapi.util import open_query
+from web3 import Web3
 
+from web3.contract import ConciseContract as Factory
+
+from src.constants import PUBLIC_RESOLVER_ABI
 from src.subgraph.ens_data import get_names_for_wallets
 from src.utils import write_to_json, valid_date
 
 SUBGRAPH_URL = "https://api.thegraph.com/subgraphs/name/ensdomains/ens"
+
+load_dotenv()
+w3 = Web3(Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}"))
+
+def read_ens_text(address: str, node: str, key: str):
+    resolver_contract = w3.eth.contract(
+        address=Web3.toChecksumAddress(address),
+        abi=PUBLIC_RESOLVER_ABI
+    )
+
+    text = resolver_contract.caller.text(node, key)
+    return text
 
 
 class RetentionCategory(Enum):
@@ -93,5 +110,5 @@ if __name__ == "__main__":
         cur_day += datetime.timedelta(days=1)
 
     write_to_json(
-        results, path="./out", filename=f"{category}-week-{start.date()}.json"
+        results, path="./out", filename=f"text-{category}-week-{start.date()}.json"
     )
