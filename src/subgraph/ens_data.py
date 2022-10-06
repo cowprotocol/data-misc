@@ -66,14 +66,14 @@ def resolve_query(
     """
 
 
-WalletNameMap = dict[str, list[str]]
+WalletNameMap = dict[str, list[dict[str, dict]]]
 
 
-def get_names_for_wallets(
+def get_wallet_ens_data(
     wallet_set: set[str], block: Optional[int] = None
 ) -> WalletNameMap:
     results: WalletNameMap = {}
-    partition = partition_array(list(wallet_set), 1000)
+    partition = partition_array(list(wallet_set), 500)
     for part in partition:
         results.update(get_names_for_wallets_small(set(part), block))
     return results

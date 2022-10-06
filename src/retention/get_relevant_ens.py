@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from duneapi.api import DuneAPI
 from duneapi.types import DuneQuery, Network, QueryParameter
 from duneapi.util import open_query
-from src.subgraph.ens_data import get_names_for_wallets
+from src.subgraph.ens_data import get_wallet_ens_data
 from src.utils import write_to_json, valid_date
 
 SUBGRAPH_URL = "https://api.thegraph.com/subgraphs/name/ensdomains/ens"
@@ -46,7 +46,7 @@ def fetch_retained_users(
     )
     wallets = set(rec["trader"].lower() for rec in dune.fetch(query))
     print(f"Got {len(wallets)} results")
-    ens_map = get_names_for_wallets(wallets)
+    ens_map = get_wallet_ens_data(wallets)
     print(f"Matched {len(ens_map)} wallets to names")
 
     return ens_map

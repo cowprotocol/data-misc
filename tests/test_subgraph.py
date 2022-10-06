@@ -1,6 +1,6 @@
 import unittest
 
-from src.subgraph.ens_data import get_names_for_wallets
+from src.subgraph.ens_data import get_wallet_ens_data
 
 
 class MyTestCase(unittest.TestCase):
@@ -28,7 +28,7 @@ class MyTestCase(unittest.TestCase):
                 }
             ],
         }
-        results = get_names_for_wallets(set(expected_ens_records.keys()), 15687500)
+        results = get_wallet_ens_data(set(expected_ens_records.keys()), 15687500)
         for wallet, data in expected_ens_records.items():
             self.assertEqual(results[wallet], data, f"failed for wallet {wallet}")
 
