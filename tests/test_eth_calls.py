@@ -1,6 +1,6 @@
 import unittest
 
-from src.retention.get_relevant_ens import read_ens_text
+from src.subgraph.ens_data import read_ens_text
 
 
 class MyTestCase(unittest.TestCase):
@@ -22,7 +22,7 @@ class MyTestCase(unittest.TestCase):
         for text, value in zip(texts, expected):
             self.assertEqual(
                 read_ens_text(
-                    address=public_resolver,
+                    resolver=public_resolver,
                     node=node,
                     key=text,
                 ),
