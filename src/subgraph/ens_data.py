@@ -1,11 +1,38 @@
 import json
+import os
 from collections import defaultdict
 from typing import Optional
 
+from dotenv import load_dotenv
+from web3 import Web3
+
+from src.constants import PUBLIC_RESOLVER_ABI
 from src.subgraph.fetch import execute_subgraph_query
 from src.utils import partition_array
 
 SUBGRAPH_URL = "https://api.thegraph.com/subgraphs/name/ensdomains/ens"
+
+RELEVANT_FIELDS = {
+    "email",
+    "url",
+    "com.discord",
+    "com.github",
+    "com.reddit",
+    "com.twitter",
+    "org.telegram",
+}
+
+load_dotenv()
+w3 = Web3(Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}"))
+
+
+def read_ens_text(resolver: str, node: str, key: str):
+    resolver_contract = w3.eth.contract(
+        address=Web3.toChecksumAddress(resolver), abi=PUBLIC_RESOLVER_ABI
+    )
+
+    text = resolver_contract.caller.text(node, key)
+    return text
 
 
 def resolve_query(
@@ -31,6 +58,7 @@ def resolve_query(
           id
         }}
         resolver {{
+            address
             texts
         }}
       }}
@@ -59,17 +87,6 @@ def get_result_page(wallets, skip, block: Optional[int] = None):
     return result_json["data"]["domains"]
 
 
-RELEVANT_FIELDS = {
-    "email",
-    "url",
-    "com.discord",
-    "com.github",
-    "com.reddit",
-    "com.twitter",
-    "org.telegram",
-}
-
-
 def get_names_for_wallets_small(
     wallet_set: set[str], block: Optional[int] = None
 ) -> WalletNameMap:
@@ -81,9 +98,12 @@ def get_names_for_wallets_small(
         for rec in result_dict:
             wallet, name = rec["resolvedAddress"]["id"], rec["name"]
             texts, ens_id = rec["resolver"]["texts"], rec["id"]
+            resolver = rec["resolver"]["address"]
             if texts and not set(texts).isdisjoint(RELEVANT_FIELDS):
-                # print(f"wallet {wallet} with name {name} has fields {texts}")
-                results[wallet].append({name: {"id": ens_id, "texts": texts}})
+                rich_text = {}
+                for text in texts:
+                    rich_text[text] = read_ens_text(resolver, ens_id, text)
+                results[wallet].append({name: {"id": ens_id, "texts": rich_text}})
         skip += 100
         result_dict = get_result_page(wallets, skip)
     return results

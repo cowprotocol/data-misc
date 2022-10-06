@@ -1,33 +1,15 @@
 import argparse
 import datetime
-import os
 from enum import Enum
 
 from dotenv import load_dotenv
 from duneapi.api import DuneAPI
 from duneapi.types import DuneQuery, Network, QueryParameter
 from duneapi.util import open_query
-from web3 import Web3
-
-from web3.contract import ConciseContract as Factory
-
-from src.constants import PUBLIC_RESOLVER_ABI
 from src.subgraph.ens_data import get_names_for_wallets
 from src.utils import write_to_json, valid_date
 
 SUBGRAPH_URL = "https://api.thegraph.com/subgraphs/name/ensdomains/ens"
-
-load_dotenv()
-w3 = Web3(Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}"))
-
-def read_ens_text(address: str, node: str, key: str):
-    resolver_contract = w3.eth.contract(
-        address=Web3.toChecksumAddress(address),
-        abi=PUBLIC_RESOLVER_ABI
-    )
-
-    text = resolver_contract.caller.text(node, key)
-    return text
 
 
 class RetentionCategory(Enum):
@@ -43,7 +25,7 @@ class RetentionCategory(Enum):
 
 
 def fetch_retained_users(
-    dune: DuneAPI, category: RetentionCategory, day: datetime, cache: set[str]
+    dune: DuneAPI, category: RetentionCategory, day: datetime
 ):
     """
     Fetches ETH spent on CIP-9 Fee subsidies
@@ -63,12 +45,9 @@ def fetch_retained_users(
         ],
     )
     wallets = set(rec["trader"].lower() for rec in dune.fetch(query))
-    new_wallets = wallets - cache
-    print(f"Got {len(wallets)} results - {len(new_wallets)} of which were new")
-    ens_map = get_names_for_wallets(new_wallets)
+    print(f"Got {len(wallets)} results")
+    ens_map = get_names_for_wallets(wallets)
     print(f"Matched {len(ens_map)} wallets to names")
-    # for matched_wallet, names in ens_map.items():
-    #     print(matched_wallet, names)
 
     return ens_map
 
@@ -77,8 +56,8 @@ if __name__ == "__main__":
     load_dotenv()
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-s",
-        "--start",
+        "-d",
+        "--day",
         help="The Start Date - format YYYY-MM-DD",
         required=True,
         type=valid_date,
@@ -88,27 +67,20 @@ if __name__ == "__main__":
         "--category",
         type=RetentionCategory,
         choices=list(RetentionCategory),
-        help=f"Retention category to query from. Can be any of {list(RetentionCategory)}",
+        help=f"Retention category to query from. One of {list(RetentionCategory)}",
     )
     args = parser.parse_args()
 
-    start = args.start
+    start = args.day
     category = args.category
 
     end = start + datetime.timedelta(days=7)
     cur_day = start
-    results = {}
-    while cur_day < end:
-        results.update(
-            fetch_retained_users(
-                dune=DuneAPI.new_from_environment(),
-                day=cur_day,
-                category=category,
-                cache=set(results.keys()),
-            )
-        )
-        cur_day += datetime.timedelta(days=1)
-
+    results = fetch_retained_users(
+        dune=DuneAPI.new_from_environment(),
+        day=cur_day,
+        category=category,
+    )
     write_to_json(
         results, path="./out", filename=f"text-{category}-week-{start.date()}.json"
     )

@@ -1,6 +1,6 @@
 import unittest
 
-from src.retention_ens import read_ens_text
+from src.retention.get_relevant_ens import read_ens_text
 
 
 class MyTestCase(unittest.TestCase):
