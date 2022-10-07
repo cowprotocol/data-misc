@@ -86,9 +86,7 @@ def fetch_missing_tokens_api(dune: DuneClient) -> MissingTokenResults:
     print(f"Fetching V1 missing tokens from {V1_QUERY.query_id}")
     v1_missing = dune.refresh(V1_QUERY)
     print(f"Fetching V2 missing tokens from {V2_QUERY.query_id}")
-    v2_missing = dune.get_result("01GERZ7JW8A29ZXY4R35SS0GXK").result.rows
-    # v2_missing = dune.refresh(V2_QUERY)
-
+    v2_missing = dune.refresh(V2_QUERY)
 
     return MissingTokenResults(
         v1=[Address(row["token"]) for row in v1_missing],
@@ -103,7 +101,7 @@ if __name__ == "__main__":
         Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}")
     )
     missing_tokens = fetch_missing_tokens_api(DuneClient(os.environ["DUNE_API_KEY"]))
-    print(missing_tokens)
+
     if not missing_tokens.is_empty():
         print(
             f"Found {len(missing_tokens.v1)} missing tokens on V1 "
@@ -120,7 +118,7 @@ if __name__ == "__main__":
         v1_results = "\n".join(token_details[t].v1_string() for t in missing_tokens.v1)
         v2_results = "\n".join(token_details[t].v2_string() for t in missing_tokens.v2)
 
-        print(f"V1 results:\n{v1_results}")
-        print(f"V2 results:\n{v2_results}")
+        print(f"V1 results:\n\n{v1_results}\n")
+        print(f"V2 results:\n\n{v2_results}\n")
     else:
         print("No missing tokens detected. Have a good day!")
