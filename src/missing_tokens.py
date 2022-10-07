@@ -1,18 +1,13 @@
-import csv
 import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 import web3.exceptions
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
 from dune_client.query import Query as DuneQuery
 
-from duneapi.api import DuneAPI
-from duneapi.file_io import File
-from duneapi.types import Address, DuneQuery as LegacyDuneQuery, Network
-from duneapi.util import open_query
+from duneapi.types import Address
 from web3 import Web3
 
 from src.constants import ERC20_ABI
@@ -49,25 +44,6 @@ class TokenDetails:
 
     def v2_string(self) -> str:
         return f"('{self.address.lower()}', '{self.symbol}', {self.decimals}),"
-
-
-def fetch_missing_tokens_legacy(dune: DuneAPI, file: Optional[File]) -> list[Address]:
-    """Initiates and executes Dune query for affiliate data on given month"""
-    if file:
-        # Until we can fetch from DuneV2, this will have to be a file.
-        print(f"Loading missing tokens from: {file.filename()}")
-        with open(file.filename(), "r") as csv_file:
-            return [Address(row["token"]) for row in csv.DictReader(csv_file)]
-
-    print("Getting missing tokens from: https://dune.com/queries/236085")
-    query = LegacyDuneQuery.from_environment(
-        raw_sql=open_query("./queries/missing-tokens.sql"),
-        name=f"Missing Tokens",
-        network=Network.MAINNET,
-        parameters=[],
-    )
-    results = dune.fetch(query)
-    return [Address(row["token"]) for row in results]
 
 
 @dataclass
@@ -120,5 +96,6 @@ if __name__ == "__main__":
 
         print(f"V1 results:\n\n{v1_results}\n")
         print(f"V2 results:\n\n{v2_results}\n")
+        # TODO - write to file!
     else:
         print("No missing tokens detected. Have a good day!")
