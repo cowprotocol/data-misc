@@ -83,9 +83,9 @@ class MissingTokenResults:
 
 
 def fetch_missing_tokens_api(dune: DuneClient) -> MissingTokenResults:
-    print(f"Fetching V1 missing tokens from {V1_QUERY.query_id}")
+    print(f"Fetching V1 missing tokens from {V1_QUERY.url()}")
     v1_missing = dune.refresh(V1_QUERY)
-    print(f"Fetching V2 missing tokens from {V2_QUERY.query_id}")
+    print(f"Fetching V2 missing tokens from {V2_QUERY.url()}")
     v2_missing = dune.refresh(V2_QUERY)
 
     return MissingTokenResults(
