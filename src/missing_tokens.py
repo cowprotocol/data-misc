@@ -81,7 +81,7 @@ if __name__ == "__main__":
     if not missing_tokens.is_empty():
         print(
             f"Found {len(missing_tokens.v1)} missing tokens on V1 "
-            f"and {len(missing_tokens.v2)}, fetching metadata...\n"
+            f"and {len(missing_tokens.v2)} on V2. Fetching token details...\n"
         )
         token_details = {}
         for token in missing_tokens.all_tokens():
