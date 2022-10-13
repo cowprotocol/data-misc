@@ -33,16 +33,18 @@ class TokenDetails:
 
     def to_str(self, version: DuneVersion):
         if version == DuneVersion.V1:
-            self.v1_string()
+            self.as_v1_string()
         if version == DuneVersion.V2:
-            return self.v2_string()
+            return self.as_v2_string()
         raise ValueError(f"Invalid DuneVersion {version}")
 
-    def v1_string(self) -> str:
+    def as_v1_string(self) -> str:
+        """Returns Dune V1 Representation of an ERC20 Token"""
         address_bytea = f"\\\\x{self.address[2:]}"
         return f"{address_bytea}\t{self.symbol}\t{self.decimals}"
 
-    def v2_string(self) -> str:
+    def as_v2_string(self) -> str:
+        """Returns Dune V2 Representation of an ERC20 Token"""
         return f"('{self.address.lower()}', '{self.symbol}', {self.decimals}),"
 
 
@@ -54,11 +56,11 @@ class MissingTokenResults:
     def is_empty(self) -> bool:
         return self.v1 is [] and self.v2 is []
 
-    def all_tokens(self) -> set[Address]:
+    def get_all_tokens(self) -> set[Address]:
         return set(self.v1 + self.v2)
 
 
-def fetch_missing_tokens_api(dune: DuneClient) -> MissingTokenResults:
+def fetch_missing_tokens(dune: DuneClient) -> MissingTokenResults:
     print(f"Fetching V1 missing tokens from {V1_QUERY.url()}")
     v1_missing = dune.refresh(V1_QUERY)
     print(f"Fetching V2 missing tokens from {V2_QUERY.url()}")
@@ -76,7 +78,7 @@ if __name__ == "__main__":
     w3 = Web3(
         Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}")
     )
-    missing_tokens = fetch_missing_tokens_api(DuneClient(os.environ["DUNE_API_KEY"]))
+    missing_tokens = fetch_missing_tokens(DuneClient(os.environ["DUNE_API_KEY"]))
 
     if not missing_tokens.is_empty():
         print(
@@ -84,15 +86,15 @@ if __name__ == "__main__":
             f"and {len(missing_tokens.v2)} on V2. Fetching token details...\n"
         )
         token_details = {}
-        for token in missing_tokens.all_tokens():
+        for token in missing_tokens.get_all_tokens():
             try:
                 # TODO batch the eth_calls used to construct the token contracts.
                 token_details[token] = TokenDetails(address=token)
             except web3.exceptions.BadFunctionCallOutput as err:
                 print(f"Something wrong with token {token} - skipping.")
 
-        v1_results = "\n".join(token_details[t].v1_string() for t in missing_tokens.v1)
-        v2_results = "\n".join(token_details[t].v2_string() for t in missing_tokens.v2)
+        v1_results = "\n".join(token_details[t].as_v1_string() for t in missing_tokens.v1)
+        v2_results = "\n".join(token_details[t].as_v2_string() for t in missing_tokens.v2)
 
         print(f"V1 results:\n\n{v1_results}\n")
         print(f"V2 results:\n\n{v2_results}\n")
