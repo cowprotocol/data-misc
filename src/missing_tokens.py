@@ -1,94 +1,144 @@
-import argparse
-import csv
 import os
-from enum import Enum
-from typing import Optional
+from dataclasses import dataclass
 
 import web3.exceptions
 from dotenv import load_dotenv
-from duneapi.api import DuneAPI
-from duneapi.file_io import File
-from duneapi.types import Address, DuneQuery, Network
-from duneapi.util import open_query
+from dune_client.client import DuneClient
+from dune_client.query import Query as DuneQuery
+from dune_client.types import QueryParameter
+
+from duneapi.types import Address
 from web3 import Web3
 
-from web3.contract import ConciseContract as Factory
-
 from src.constants import ERC20_ABI
+from src.utils import Network
 
-
-class DuneVersion(Enum):
-    V1 = "1"
-    V2 = "2"
+V1_QUERY = DuneQuery(name="V1: Missing Tokens", query_id=1317323)
 
 
 class TokenDetails:
-    def __init__(self, address: Address):
-        self.address = address.address
-        token_contract = w3.eth.contract(
-            address=Web3.toChecksumAddress(self.address),
-            abi=ERC20_ABI,
-            ContractFactoryClass=Factory,
-        )
-        self.symbol = token_contract.symbol()
-        self.decimals = token_contract.decimals()
+    """EVM token Details (including address, symbol, decimals)"""
 
-    def to_str(self, version: DuneVersion):
-        if version == DuneVersion.V1:
-            address_bytea = f"\\\\x{self.address[2:]}"
-            return f"{address_bytea}\t{self.symbol}\t{self.decimals}"
-        if version == DuneVersion.V2:
-            return f"('{self.address.lower()}', '{self.symbol}', {self.decimals}),"
-        raise ValueError(f"Invalid DuneVersion {version}")
+    def __init__(self, address: Address, w3: Web3):
+        self.address = Web3.toChecksumAddress(address.address)
+        if self.address == Web3.toChecksumAddress(
+            "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+        ):
+            self.symbol = "ETH"
+            self.decimals = 18
+        else:
+            token_contract = w3.eth.contract(address=self.address, abi=ERC20_ABI)
+            self.symbol = token_contract.caller.symbol()
+            self.decimals = token_contract.caller.decimals()
+
+    def as_v1_string(self, chain: Network) -> str:
+        # pylint:disable=line-too-long
+        """
+        Returns Dune V1 Representation of an ERC20 Token
+        mainnet: https://github.com/duneanalytics/spellbook/blob/main/deprecated-dune-v1-abstractions/ethereum/erc20/tokens.sql
+        gnosis: https://github.com/duneanalytics/spellbook/blob/main/deprecated-dune-v1-abstractions/xdai/erc20/extended_tokenlist.sql
+        """
+        symbol, decimals, address = self.symbol, self.decimals, str(self.address)
+        if chain == Network.MAINNET:
+            # Eg. \\x96B00208911d72eA9f10c3303fF319427A7884C9	BLUE	18
+            address_bytea = f"\\\\x{address[2:]}"
+            return f"{address_bytea}\t{symbol}\t{decimals}"
+        if chain == Network.GNOSIS:
+            # Eg. ('BAND', 18, decode('e154a435408211ac89757b76c4fbe4dc9ed2ef27', 'hex')),
+            return f"('{symbol}', {decimals}, decode('{address[2:]}', 'hex')),"
+
+        raise ValueError(f"Incompatible Network {chain}")
+
+    def as_v2_string(self) -> str:
+        """
+        Returns Dune V2 Representation of an ERC20 Token:
+        https://github.com/duneanalytics/spellbook/blob/main/models/tokens/ethereum/tokens_ethereum_erc20.sql
+        """
+        # Eg. ('0xfcc5c47be19d06bf83eb04298b026f81069ff65b', 'yCRV', 18),
+
+        return f"('{str(self.address).lower()}', '{self.symbol}', {self.decimals}),"
 
 
-def fetch_missing_tokens(dune: DuneAPI, file: Optional[File]) -> list[Address]:
-    """Initiates and executes Dune query for affiliate data on given month"""
-    if file:
-        # Until we can fetch from DuneV2, this will have to be a file.
-        print(f"Loading missing tokens from: {file.filename()}")
-        with open(file.filename(), "r") as csv_file:
-            return [Address(row["token"]) for row in csv.DictReader(csv_file)]
+@dataclass
+class MissingTokenResults:
+    """
+    Dataclass holding list of missing tokens per Dune Engine
+    This allows us to avoid redundant EVM calls when the two lists overlap.
+    """
 
-    print("Getting missing tokens from: https://dune.com/queries/236085")
-    query = DuneQuery.from_environment(
-        raw_sql=open_query("./queries/missing-tokens.sql"),
-        name=f"Missing Tokens",
-        network=Network.MAINNET,
-        parameters=[],
+    v1: list[Address]
+    v2: list[Address]
+
+    def is_empty(self) -> bool:
+        """True if no tokens in both lists, otherwise False"""
+        return not self.v1 and not self.v2
+
+    def get_all_tokens(self) -> set[Address]:
+        """Returns a set of all distinct tokens in from both lists (i.e. their union)"""
+        return set(self.v1 + self.v2)
+
+
+def fetch_missing_tokens_legacy(dune: DuneClient, network: Network) -> list[Address]:
+    """Uses Official Dune API to fetch Missing Tokens for V1 Engine"""
+    query = DuneQuery(
+        name="V1: Missing Tokens",
+        query_id={Network.MAINNET: 1317323, Network.GNOSIS: 1403053}[network],
     )
-    results = dune.fetch(query)
-    return [Address(row["token"]) for row in results]
+    print(f"Fetching V1 missing tokens for {network} from {query.url()}")
+    v1_missing = dune.refresh(query)
+    return [Address(row["token"]) for row in v1_missing]
+
+
+def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
+    """Uses Official Dune API and to fetch Missing Tokens for V2 Engine"""
+    query = DuneQuery(
+        name="V2: Missing Tokens",
+        query_id=1403073,
+        params=[QueryParameter.enum_type("Blockchain", network.as_dune_v2_repr())],
+    )
+    print(f"Fetching V2 missing tokens for {network} from {query.url()}")
+    v2_missing = dune.refresh(query)
+
+    return [Address(row["token"]) for row in v2_missing]
+
+
+def run_missing_tokens(chain: Network) -> None:
+    """Script's main entry point, runs for given network."""
+    w3 = Web3(Web3.HTTPProvider(chain.node_url(os.environ["INFURA_KEY"])))
+    missing_tokens = MissingTokenResults(
+        v1=fetch_missing_tokens_legacy(DuneClient(os.environ["DUNE_API_KEY"]), chain),
+        v2=fetch_missing_tokens(DuneClient(os.environ["DUNE_API_KEY"]), chain),
+    )
+
+    if not missing_tokens.is_empty():
+        print(
+            f"Found {len(missing_tokens.v1)} missing tokens on V1 "
+            f"and {len(missing_tokens.v2)} on V2. Fetching token details...\n"
+        )
+        token_details = {}
+        for token in missing_tokens.get_all_tokens():
+            try:
+                # TODO batch the eth_calls used to construct the token contracts.
+                token_details[token] = TokenDetails(address=token, w3=w3)
+            except web3.exceptions.BadFunctionCallOutput:
+                print(f"Something wrong with token {token} - skipping.")
+
+        v1_results = "\n".join(
+            token_details[t].as_v1_string(chain) for t in missing_tokens.v1
+        )
+        v2_results = "\n".join(
+            token_details[t].as_v2_string() for t in missing_tokens.v2
+        )
+
+        print(f"V1 results:\n\n{v1_results}\n")
+        print(f"V2 results:\n\n{v2_results}\n")
+        # TODO - write to file!
+    else:
+        print(f"No missing tokens detected on {chain}. Have a good day!")
 
 
 if __name__ == "__main__":
     load_dotenv()
-    parser = argparse.ArgumentParser("Missing Tokens")
-    parser.add_argument(
-        "--token-file",
-        type=str,
-        help="CSV File to read token data from (this is for Dune V2)",
-    )
-    args = parser.parse_args()
-
-    token_file = File(args.token_file) if args.token_file else None
-    # We only supply a token file for Dune V2.
-    dune_version = DuneVersion.V1 if not token_file else DuneVersion.V2
-
-    w3 = Web3(
-        Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}")
-    )
-    dune_conn = DuneAPI.new_from_environment()
-    missing_tokens = fetch_missing_tokens(dune_conn, file=token_file)
-    if missing_tokens:
-        print(f"Found {len(missing_tokens)} missing tokens, fetching metadata...\n")
-        token_details = []
-        for t in missing_tokens:
-            try:
-                # TODO batch the eth_calls used to construct the token contracts.
-                token_details.append(TokenDetails(address=t).to_str(dune_version))
-            except web3.exceptions.BadFunctionCallOutput as err:
-                print(f"Something wrong with token {t} - skipping.")
-        print("\n".join(token_details))
-    else:
-        print("No missing tokens detected. Have a good day!")
+    for blockchain in list(Network):
+        print(f"Execute on Network {blockchain}")
+        run_missing_tokens(chain=blockchain)
