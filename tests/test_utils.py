@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import unittest
 import shutil
 from datetime import datetime
@@ -11,6 +12,7 @@ from src.utils import partition_array, write_to_json, valid_date, Network
 class MyTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.path = "./tmp"
+        os.mkdir(self.path)
         self.filename = "test-file"
 
     def tearDown(self) -> None:
@@ -45,9 +47,9 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(mainnet.chain_id, 1)
 
         self.assertEqual(
-            gnosis.node_url("FakeKey"), "https://mainnet.infura.io/v3/FakeKey"
+            gnosis.node_url("FakeKey"), "https://rpc.gnosischain.com"
         )
-        self.assertEqual(mainnet.node_url("FakeKey"), "https://rpc.gnosischain.com")
+        self.assertEqual(mainnet.node_url("FakeKey"), "https://mainnet.infura.io/v3/FakeKey")
 
         self.assertEqual(gnosis.as_dune_v1_repr(), LegacyDuneNetwork.GCHAIN)
         self.assertEqual(mainnet.as_dune_v1_repr(), LegacyDuneNetwork.MAINNET)
