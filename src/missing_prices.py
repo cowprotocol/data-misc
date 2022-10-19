@@ -14,6 +14,8 @@ from duneapi.types import Address, DuneQuery, Network
 from duneapi.util import open_query
 
 
+DuneTokenPriceRow = tuple[str, str, str, str, int]
+# TODO - remove the Anys here.
 def load_coins() -> dict[str, dict[str, Any]]:
     """ "
     Loads and returns coin dictionaries from Coin Paprika via their API.
@@ -47,9 +49,7 @@ def load_coins() -> dict[str, dict[str, Any]]:
     return coin_dict
 
 
-def write_results(
-    results: list[tuple[Any, str, Any, Any, int]], path: str, filename: str
-) -> None:
+def write_results(results: list[DuneTokenPriceRow], path: str, filename: str) -> None:
     """Writes results to file"""
     if not os.path.exists(path):
         os.makedirs(path)
@@ -131,8 +131,8 @@ def run_missing_prices() -> None:
             dune_row = (
                 str(paprika_data["id"]),
                 "ethereum",
-                paprika_data["symbol"],
-                paprika_data["address"].lower(),
+                str(paprika_data["symbol"]),
+                str(paprika_data["address"].lower()),
                 int(token["decimals"]),
             )
             res.append(dune_row)
