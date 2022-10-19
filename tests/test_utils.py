@@ -46,10 +46,10 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(gnosis.chain_id, 100)
         self.assertEqual(mainnet.chain_id, 1)
 
+        self.assertEqual(gnosis.node_url("FakeKey"), "https://rpc.gnosischain.com")
         self.assertEqual(
-            gnosis.node_url("FakeKey"), "https://rpc.gnosischain.com"
+            mainnet.node_url("FakeKey"), "https://mainnet.infura.io/v3/FakeKey"
         )
-        self.assertEqual(mainnet.node_url("FakeKey"), "https://mainnet.infura.io/v3/FakeKey")
 
         self.assertEqual(gnosis.as_dune_v1_repr(), LegacyDuneNetwork.GCHAIN)
         self.assertEqual(mainnet.as_dune_v1_repr(), LegacyDuneNetwork.MAINNET)
