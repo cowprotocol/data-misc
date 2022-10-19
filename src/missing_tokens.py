@@ -1,4 +1,3 @@
-import argparse
 import os
 from dataclasses import dataclass
 
@@ -12,12 +11,14 @@ from duneapi.types import Address
 from web3 import Web3
 
 from src.constants import ERC20_ABI
-from src.utils import Network, DuneVersion
+from src.utils import Network
 
 V1_QUERY = DuneQuery(name="V1: Missing Tokens", query_id=1317323)
 
 
 class TokenDetails:
+    """EVM token Details (including address, symbol, decimals)"""
+
     def __init__(self, address: Address, w3: Web3):
         self.address = Web3.toChecksumAddress(address.address)
         if self.address == Web3.toChecksumAddress(
@@ -30,27 +31,23 @@ class TokenDetails:
             self.symbol = token_contract.caller.symbol()
             self.decimals = token_contract.caller.decimals()
 
-    def to_str(self, version: DuneVersion) -> str:
-        if version == DuneVersion.V1:
-            self.as_v1_string()
-        if version == DuneVersion.V2:
-            return self.as_v2_string()
-        raise ValueError(f"Invalid DuneVersion {version}")
-
     def as_v1_string(self, chain: Network) -> str:
+        # pylint:disable=line-too-long
         """
         Returns Dune V1 Representation of an ERC20 Token
         mainnet: https://github.com/duneanalytics/spellbook/blob/main/deprecated-dune-v1-abstractions/ethereum/erc20/tokens.sql
         gnosis: https://github.com/duneanalytics/spellbook/blob/main/deprecated-dune-v1-abstractions/xdai/erc20/extended_tokenlist.sql
         """
-        symbol, decimals, address = self.symbol, self.decimals, self.address
+        symbol, decimals, address = self.symbol, self.decimals, str(self.address)
         if chain == Network.MAINNET:
             # Eg. \\x96B00208911d72eA9f10c3303fF319427A7884C9	BLUE	18
             address_bytea = f"\\\\x{address[2:]}"
             return f"{address_bytea}\t{symbol}\t{decimals}"
-        elif chain == Network.GNOSIS:
+        if chain == Network.GNOSIS:
             # Eg. ('BAND', 18, decode('e154a435408211ac89757b76c4fbe4dc9ed2ef27', 'hex')),
             return f"('{symbol}', {decimals}, decode('{address[2:]}', 'hex')),"
+
+        raise ValueError(f"Incompatible Network {chain}")
 
     def as_v2_string(self) -> str:
         """
@@ -58,22 +55,31 @@ class TokenDetails:
         https://github.com/duneanalytics/spellbook/blob/main/models/tokens/ethereum/tokens_ethereum_erc20.sql
         """
         # Eg. ('0xfcc5c47be19d06bf83eb04298b026f81069ff65b', 'yCRV', 18),
-        return f"('{self.address.lower()}', '{self.symbol}', {self.decimals}),"
+
+        return f"('{str(self.address).lower()}', '{self.symbol}', {self.decimals}),"
 
 
 @dataclass
 class MissingTokenResults:
+    """
+    Dataclass holding list of missing tokens per Dune Engine
+    This allows us to avoid redundant EVM calls when the two lists overlap.
+    """
+
     v1: list[Address]
     v2: list[Address]
 
     def is_empty(self) -> bool:
+        """True if no tokens in both lists, otherwise False"""
         return not self.v1 and not self.v2
 
     def get_all_tokens(self) -> set[Address]:
+        """Returns a set of all distinct tokens in from both lists (i.e. their union)"""
         return set(self.v1 + self.v2)
 
 
 def fetch_missing_tokens_legacy(dune: DuneClient, network: Network) -> list[Address]:
+    """Uses Official Dune API to fetch Missing Tokens for V1 Engine"""
     query = DuneQuery(
         name="V1: Missing Tokens",
         query_id={Network.MAINNET: 1317323, Network.GNOSIS: 1403053}[network],
@@ -84,6 +90,7 @@ def fetch_missing_tokens_legacy(dune: DuneClient, network: Network) -> list[Addr
 
 
 def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
+    """Uses Official Dune API and to fetch Missing Tokens for V2 Engine"""
     query = DuneQuery(
         name="V2: Missing Tokens",
         query_id=1403073,
@@ -95,8 +102,9 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
     return [Address(row["token"]) for row in v2_missing]
 
 
-def run(chain: Network) -> None:
-    w3 = Web3(Web3.HTTPProvider(chain.node_url))
+def run_missing_tokens(chain: Network) -> None:
+    """Script's main entry point, runs for given network."""
+    w3 = Web3(Web3.HTTPProvider(chain.node_url(os.environ["INFURA_KEY"])))
     missing_tokens = MissingTokenResults(
         v1=fetch_missing_tokens_legacy(DuneClient(os.environ["DUNE_API_KEY"]), chain),
         v2=fetch_missing_tokens(DuneClient(os.environ["DUNE_API_KEY"]), chain),
@@ -112,7 +120,7 @@ def run(chain: Network) -> None:
             try:
                 # TODO batch the eth_calls used to construct the token contracts.
                 token_details[token] = TokenDetails(address=token, w3=w3)
-            except web3.exceptions.BadFunctionCallOutput as err:
+            except web3.exceptions.BadFunctionCallOutput:
                 print(f"Something wrong with token {token} - skipping.")
 
         v1_results = "\n".join(
@@ -133,4 +141,4 @@ if __name__ == "__main__":
     load_dotenv()
     for blockchain in list(Network):
         print(f"Execute on Network {blockchain}")
-        run(chain=blockchain)
+        run_missing_tokens(chain=blockchain)

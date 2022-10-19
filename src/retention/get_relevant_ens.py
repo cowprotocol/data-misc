@@ -25,7 +25,7 @@ class RetentionCategory(Enum):
 
 
 def fetch_retained_users(
-    dune: DuneAPI, category: RetentionCategory, day: datetime
+    dune: DuneAPI, category: RetentionCategory, day: datetime.datetime
 ):
     """
     Fetches ETH spent on CIP-9 Fee subsidies
@@ -72,15 +72,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     start = args.day
-    category = args.category
-
-    end = start + datetime.timedelta(days=7)
     cur_day = start
     results = fetch_retained_users(
         dune=DuneAPI.new_from_environment(),
         day=cur_day,
-        category=category,
+        category=args.category,
     )
     write_to_json(
-        results, path="./out", filename=f"text-{category}-week-{start.date()}.json"
+        results, path="./out", filename=f"text-{args.category}-week-{start.date()}"
     )

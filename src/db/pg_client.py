@@ -34,5 +34,6 @@ def pg_connect() -> connection:
 def pg_engine() -> engine:
     return create_engine(db_string())
 
+
 def db_string() -> str:
     return f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"

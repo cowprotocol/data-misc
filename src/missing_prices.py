@@ -13,14 +13,17 @@ from duneapi.util import open_query
 
 
 # Begin Hack
-# This little block is a hack to get the address (as a number) to print without quotes.
 class HexInt(int):
-    pass
+    """
+    This little block is a hack to get the address (as a number) to print without quotes.
+    """
 
 
+# pylint:disable=unused-argument
 def representer(dumper, data):
-    result = yaml.ScalarNode("tag:yaml.org,2002:int", "0x{:040x}".format(data))
-    return result
+    """Yaml Representer for HexInt"""
+    # pylint:disable=consider-using-f-string
+    return yaml.ScalarNode("tag:yaml.org,2002:int", "0x{:040x}".format(data))
 
 
 yaml.add_representer(HexInt, representer)
@@ -28,6 +31,10 @@ yaml.add_representer(HexInt, representer)
 
 
 def load_coins() -> dict[str, list[dict]]:
+    """ "
+    Loads and returns coin dictionaries from Coin Paprika via their API.
+    Excludes, inactive, new and non "token" types
+    """
     entries = requests.get(
         url="https://api.coinpaprika.com/v1/coins", timeout=10
     ).json()
@@ -40,27 +47,31 @@ def load_coins() -> dict[str, list[dict]]:
 
 
 def write_results(results: list[dict], path: str, filename: str):
+    """
+    Writes Results to YAML file: Format compatible with
+    https://github.com/duneanalytics/spellbook/blob/main/deprecated-dune-v1-abstractions/prices/ethereum/coinpaprika.yaml
+    """
     if not os.path.exists(path):
         os.makedirs(path)
-    with open(os.path.join(path, filename), "w") as yaml_file:
+    with open(os.path.join(path, filename), "w", encoding="utf-8") as yaml_file:
         yaml.dump(
-            data=results,
-            stream=yaml_file,
-            default_flow_style=False,
-            sort_keys=False
+            data=results, stream=yaml_file, default_flow_style=False, sort_keys=False
         )
         print(f"Results written to {filename}")
 
 
 @dataclass
-class Token:
+class CoinPaprikaToken:
+    """Representation of a Coin Paprika Token"""
+
     address: Address
     decimals: int
     symbol: str
     popularity: int
 
     @classmethod
-    def from_dict(cls, data: dict[str, str]) -> Token:
+    def from_dict(cls, data: dict[str, str]) -> CoinPaprikaToken:
+        """Converts Dune Results into CoinPaprikaToken"""
         return cls(
             address=Address(data["address"]),
             decimals=int(data["decimals"]),
@@ -68,16 +79,17 @@ class Token:
             popularity=int(data["popularity"]),
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
-            f"Token("
+            f"CoinPaprikaToken("
             f"address={self.address}, "
-            f"decimals = {self.decimals}, "
-            f"symbol = {self.symbol}, "
-            f"popularity = {self.popularity})"
+            f"decimals={self.decimals}, "
+            f"symbol={self.symbol}, "
+            f"popularity={self.popularity})"
         )
 
-    def coin_paprika_rep(self, coin_id: str) -> dict:
+    def as_dune_repr(self, coin_id: str) -> dict:
+        """Dune YAML representation of CPToken"""
         return {
             # dune uses the snake case id as the name
             "name": coin_id.replace("-", "_"),
@@ -88,7 +100,7 @@ class Token:
         }
 
 
-def fetch_tokens_without_prices(dune: DuneAPI) -> list[Token]:
+def fetch_tokens_without_prices(dune: DuneAPI) -> list[CoinPaprikaToken]:
     """Initiates and executes Dune query for affiliate out on given month"""
     query = DuneQuery.from_environment(
         raw_sql=open_query("./queries/traded-tokens-without-prices.sql"),
@@ -97,10 +109,11 @@ def fetch_tokens_without_prices(dune: DuneAPI) -> list[Token]:
         parameters=[],
     )
     results = dune.fetch(query)
-    return [Token.from_dict(r) for r in results]
+    return [CoinPaprikaToken.from_dict(r) for r in results]
 
 
-if __name__ == "__main__":
+def run_missing_prices():
+    """Script's Main Entry Point"""
     print("Getting Coin Paprika token list")
     coins = load_coins()
     print(f"Loaded {len(coins)} coins from Coin Paprika")
@@ -119,7 +132,7 @@ if __name__ == "__main__":
         if token.symbol in coins:
             possibilities = coins[token.symbol]
             if len(possibilities) == 1:
-                res.append(token.coin_paprika_rep(possibilities[0]["id"]))
+                res.append(token.as_dune_repr(possibilities[0]["id"]))
                 found += 1
             else:
                 print(f"non unique {token}: {len(possibilities)} occurrences")
@@ -128,3 +141,7 @@ if __name__ == "__main__":
             break
 
     write_results(results=res, path="./out", filename="missing-prices.yaml")
+
+
+if __name__ == "__main__":
+    run_missing_prices()

@@ -1,7 +1,7 @@
 import json
 import os
 from collections import defaultdict
-from typing import Optional
+from typing import Optional, Any
 
 from dotenv import load_dotenv
 from web3 import Web3
@@ -26,12 +26,12 @@ load_dotenv()
 w3 = Web3(Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}"))
 
 
-def read_ens_text(resolver: str, node: str, key: str):
+def read_ens_text(resolver: str, node: str, key: str) -> str:
     resolver_contract = w3.eth.contract(
         address=Web3.toChecksumAddress(resolver), abi=PUBLIC_RESOLVER_ABI
     )
 
-    text = resolver_contract.caller.text(node, key)
+    text: str = resolver_contract.caller.text(node, key)
     return text
 
 
@@ -66,7 +66,7 @@ def resolve_query(
     """
 
 
-WalletNameMap = dict[str, list[dict[str, dict]]]
+WalletNameMap = dict[str, list[dict[str, dict[Any, Any]]]]
 
 
 def get_wallet_ens_data(
@@ -79,7 +79,7 @@ def get_wallet_ens_data(
     return results
 
 
-def get_result_page(wallets, skip, block: Optional[int] = None):
+def get_result_page(wallets: list[str], skip: int, block: Optional[int] = None) -> Any:
     result_json = execute_subgraph_query(
         subgraph_url="https://api.thegraph.com/subgraphs/name/ensdomains/ens",
         query=resolve_query(list(wallets), skip, block),
