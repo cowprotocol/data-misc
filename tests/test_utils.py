@@ -24,7 +24,7 @@ class MyTestCase(unittest.TestCase):
         data_dict = {"1": [2, 3], "4": {"5": "6"}}
         write_to_json(data_dict, self.path, self.filename)
 
-        with open(f"{self.path}/{self.filename}", 'r') as new_file:
+        with open(f"{self.path}/{self.filename}", "r") as new_file:
             self.assertEqual(json.load(new_file), data_dict)
 
 

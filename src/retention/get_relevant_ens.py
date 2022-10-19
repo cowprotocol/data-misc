@@ -24,9 +24,7 @@ class RetentionCategory(Enum):
         return str(self.value)
 
 
-def fetch_retained_users(
-    dune: DuneAPI, category: RetentionCategory, day: datetime
-):
+def fetch_retained_users(dune: DuneAPI, category: RetentionCategory, day: datetime):
     """
     Fetches ETH spent on CIP-9 Fee subsidies
     https://snapshot.org/#/cow.eth/proposal/0x4bb9b614bdc4354856c4d0002ad0845b73b5290e5799013192cbc6491e6eea0e

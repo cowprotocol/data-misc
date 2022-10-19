@@ -44,10 +44,7 @@ def write_results(results: list[dict], path: str, filename: str):
         os.makedirs(path)
     with open(os.path.join(path, filename), "w") as yaml_file:
         yaml.dump(
-            data=results,
-            stream=yaml_file,
-            default_flow_style=False,
-            sort_keys=False
+            data=results, stream=yaml_file, default_flow_style=False, sort_keys=False
         )
         print(f"Results written to {filename}")
 

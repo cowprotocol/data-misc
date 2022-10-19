@@ -12,7 +12,7 @@ from src.db.pg_client import pg_engine
 @click.option(
     "--batch_tx_hash",
     help="The transaction hash of the batch you want to see the % gas saved.",
-    type=str
+    type=str,
 )
 def main(batch_tx_hash):
     db_engine = pg_engine()
