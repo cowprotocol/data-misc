@@ -1,7 +1,8 @@
+import time
+
 import pandas as pd
 from duneapi.api import DuneAPI
 from duneapi.types import DuneQuery, Network
-import numpy as np
 from pandas import DataFrame
 from sqlalchemy import (
     Table,
@@ -14,29 +15,34 @@ from sqlalchemy import (
     func,
     case,
 )
-import time
-
 # TODO - I find it strange that LegacyCursor is still being returned...
 from sqlalchemy.engine import LegacyCursorResult
+
 from src.db.pg_client import pg_engine
 
+# pylint:disable=missing-function-docstring
 pd.options.display.max_colwidth = None
 pd.options.display.max_columns = None
 
 
 def timeit(f):
+    """Simple program timer, meant to be used as a decorator"""
+
     def timed(*args, **kw):
         ts = time.time()
         result = f(*args, **kw)
         te = time.time()
 
-        print("  func:%r took: %2.4f sec" % (f.__name__, te - ts))
+        print(f"  func:{f.__name__} took: {te - ts} sec")
         return result
 
     return timed
 
 
 def bin_str(bytea: memoryview) -> str:
+    """
+    String representation of binary object `memoryview` returned from pd.read_sql on bytea columns
+    """
     return "0x" + bytea.hex()
 
 
@@ -65,6 +71,7 @@ def sql_alchemy_basic(db: engine):
             print(bin_str(r.order_uid))
 
 
+# pylint:disable=too-many-locals
 def sql_alchemy_advanced(db: engine):
     print("Advanced: SQL Alchemy")
     meta = MetaData(db)
@@ -85,10 +92,10 @@ def sql_alchemy_advanced(db: engine):
 
     join = orders.outerjoin(trades, orders.c.uid == trades.c.order_uid)
     failed_case = case(
-        [(trades.c.block_number == None, 1), (trades.c.block_number != None, 0)]
+        [(trades.c.block_number is None, 1), (trades.c.block_number is not None, 0)]
     )
     success_case = case(
-        [(trades.c.block_number == None, 0), (trades.c.block_number != None, 1)]
+        [(trades.c.block_number is None, 0), (trades.c.block_number is not None, 1)]
     )
     successes = func.sum(success_case)
     failures = func.sum(failed_case)
@@ -187,8 +194,8 @@ def order_fill_time(db: engine, dune: DuneAPI):
     start = pd.to_datetime(joined_df.creation_timestamp)
     end = pd.to_datetime(joined_df.block_time)
     joined_df["wait_time"] = (
-        end - start
-    ).dt.seconds * 60  # / np.timedelta64(1, "s")  # .dt.seconds / 60
+                                     end - start
+                             ).dt.seconds * 60  # / np.timedelta64(1, "s")  # .dt.seconds / 60
     sorted_df = joined_df.sort_values(by=["wait_time"], ascending=False)
     # Exclude negative wait times (two different clocks)
     sorted_df = sorted_df[sorted_df.wait_time > 0]
