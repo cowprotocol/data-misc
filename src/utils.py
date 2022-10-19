@@ -28,6 +28,11 @@ def valid_date(date_str: str) -> datetime:
         raise argparse.ArgumentTypeError(msg)
 
 
+class DuneVersion(Enum):
+    V1 = "1"
+    V2 = "2"
+
+
 class Network(Enum):
     MAINNET = "mainnet"
     GNOSIS = "gnosis"

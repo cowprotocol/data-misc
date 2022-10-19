@@ -1,7 +1,6 @@
 import argparse
 import os
 from dataclasses import dataclass
-from enum import Enum
 
 import web3.exceptions
 from dotenv import load_dotenv
@@ -13,14 +12,9 @@ from duneapi.types import Address
 from web3 import Web3
 
 from src.constants import ERC20_ABI
-from src.utils import Network
+from src.utils import Network, DuneVersion
 
 V1_QUERY = DuneQuery(name="V1: Missing Tokens", query_id=1317323)
-
-
-class DuneVersion(Enum):
-    V1 = "1"
-    V2 = "2"
 
 
 class TokenDetails:
@@ -59,7 +53,7 @@ class MissingTokenResults:
     v2: list[Address]
 
     def is_empty(self) -> bool:
-        return self.v1 is [] and self.v2 is []
+        return not self.v1 and not self.v2
 
     def get_all_tokens(self) -> set[Address]:
         return set(self.v1 + self.v2)
