@@ -18,7 +18,7 @@ V1_QUERY = DuneQuery(name="V1: Missing Tokens", query_id=1317323)
 
 
 class TokenDetails:
-    def __init__(self, address: Address):
+    def __init__(self, address: Address, w3: Web3):
         self.address = Web3.toChecksumAddress(address.address)
         if self.address == Web3.toChecksumAddress(
             "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
@@ -37,13 +37,27 @@ class TokenDetails:
             return self.as_v2_string()
         raise ValueError(f"Invalid DuneVersion {version}")
 
-    def as_v1_string(self) -> str:
-        """Returns Dune V1 Representation of an ERC20 Token"""
-        address_bytea = f"\\\\x{self.address[2:]}"
-        return f"{address_bytea}\t{self.symbol}\t{self.decimals}"
+    def as_v1_string(self, chain: Network) -> str:
+        """
+        Returns Dune V1 Representation of an ERC20 Token
+        mainnet: https://github.com/duneanalytics/spellbook/blob/main/deprecated-dune-v1-abstractions/ethereum/erc20/tokens.sql
+        gnosis: https://github.com/duneanalytics/spellbook/blob/main/deprecated-dune-v1-abstractions/xdai/erc20/extended_tokenlist.sql
+        """
+        symbol, decimals, address = self.symbol, self.decimals, self.address
+        if chain == Network.MAINNET:
+            # Eg. \\x96B00208911d72eA9f10c3303fF319427A7884C9	BLUE	18
+            address_bytea = f"\\\\x{address[2:]}"
+            return f"{address_bytea}\t{symbol}\t{decimals}"
+        elif chain == Network.GNOSIS:
+            # Eg. ('BAND', 18, decode('e154a435408211ac89757b76c4fbe4dc9ed2ef27', 'hex')),
+            return f"('{symbol}', {decimals}, decode('{address[2:]}', 'hex')),"
 
     def as_v2_string(self) -> str:
-        """Returns Dune V2 Representation of an ERC20 Token"""
+        """
+        Returns Dune V2 Representation of an ERC20 Token:
+        https://github.com/duneanalytics/spellbook/blob/main/models/tokens/ethereum/tokens_ethereum_erc20.sql
+        """
+        # Eg. ('0xfcc5c47be19d06bf83eb04298b026f81069ff65b', 'yCRV', 18),
         return f"('{self.address.lower()}', '{self.symbol}', {self.decimals}),"
 
 
@@ -81,21 +95,8 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
     return [Address(row["token"]) for row in v2_missing]
 
 
-if __name__ == "__main__":
-    load_dotenv()
-    parser = argparse.ArgumentParser("Missing Tokens")
-    parser.add_argument(
-        "--network",
-        type=Network,
-        choices=list(Network),
-        default=Network.MAINNET,
-        help="Blockchain for which we would like to run this script",
-    )
-    args = parser.parse_args()
-
-    chain: Network = args.network
+def run(chain: Network) -> None:
     w3 = Web3(Web3.HTTPProvider(chain.node_url))
-
     missing_tokens = MissingTokenResults(
         v1=fetch_missing_tokens_legacy(DuneClient(os.environ["DUNE_API_KEY"]), chain),
         v2=fetch_missing_tokens(DuneClient(os.environ["DUNE_API_KEY"]), chain),
@@ -110,12 +111,12 @@ if __name__ == "__main__":
         for token in missing_tokens.get_all_tokens():
             try:
                 # TODO batch the eth_calls used to construct the token contracts.
-                token_details[token] = TokenDetails(address=token)
+                token_details[token] = TokenDetails(address=token, w3=w3)
             except web3.exceptions.BadFunctionCallOutput as err:
                 print(f"Something wrong with token {token} - skipping.")
 
         v1_results = "\n".join(
-            token_details[t].as_v1_string() for t in missing_tokens.v1
+            token_details[t].as_v1_string(chain) for t in missing_tokens.v1
         )
         v2_results = "\n".join(
             token_details[t].as_v2_string() for t in missing_tokens.v2
@@ -125,4 +126,11 @@ if __name__ == "__main__":
         print(f"V2 results:\n\n{v2_results}\n")
         # TODO - write to file!
     else:
-        print("No missing tokens detected. Have a good day!")
+        print(f"No missing tokens detected on {chain}. Have a good day!")
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    for blockchain in list(Network):
+        print(f"Execute on Network {blockchain}")
+        run(chain=blockchain)
