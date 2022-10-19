@@ -26,3 +26,5 @@ jobs:
       - name: Unit Tests
         run:
           python -m pytest tests
+        env:
+          INFURA_KEY: ${{ secrets.INFURA_KEY }}
