@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import requests
+from dotenv import load_dotenv
 from dune_client.client import DuneClient
 from dune_client.query import Query
 from dune_client.types import DuneRecord
@@ -16,7 +17,7 @@ from duneapi.util import open_query
 DuneTokenPriceRow = tuple[str, str, str, str, int]
 
 
-# TODO - remove the Anys here.
+# TODO - remove the Anys here: https://github.com/cowprotocol/data-misc/issues/20
 def load_coins() -> dict[str, dict[str, Any]]:
     """ "
     Loads and returns coin dictionaries from Coin Paprika via their API.
@@ -143,4 +144,5 @@ def run_missing_prices() -> None:
 
 
 if __name__ == "__main__":
+    load_dotenv()
     run_missing_prices()
