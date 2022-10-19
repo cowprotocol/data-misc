@@ -96,7 +96,7 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
 
 
 def run(chain: Network) -> None:
-    w3 = Web3(Web3.HTTPProvider(chain.node_url))
+    w3 = Web3(Web3.HTTPProvider(chain.node_url(os.environ['INFURA_KEY'])))
     missing_tokens = MissingTokenResults(
         v1=fetch_missing_tokens_legacy(DuneClient(os.environ["DUNE_API_KEY"]), chain),
         v2=fetch_missing_tokens(DuneClient(os.environ["DUNE_API_KEY"]), chain),

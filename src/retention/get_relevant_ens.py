@@ -80,5 +80,5 @@ if __name__ == "__main__":
         category=category,
     )
     write_to_json(
-        results, path="./out", filename=f"text-{category}-week-{start.date()}.json"
+        results, path="./out", filename=f"text-{category}-week-{start.date()}"
     )
