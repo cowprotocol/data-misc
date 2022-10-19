@@ -1,0 +1,2 @@
+[MASTER]
+disable=fixme,logging-fstring-interpolation,missing-module-docstring,invalid-name
