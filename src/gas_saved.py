@@ -3,7 +3,7 @@ import os
 import click
 import pandas as pd
 from dotenv import load_dotenv
-from eth_typing import HexStr
+from eth_typing.encoding import HexStr
 from web3 import Web3
 from web3.types import TxReceipt
 
