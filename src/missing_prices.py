@@ -13,8 +13,9 @@ from duneapi.api import DuneAPI
 from duneapi.types import Address, DuneQuery, Network
 from duneapi.util import open_query
 
-
 DuneTokenPriceRow = tuple[str, str, str, str, int]
+
+
 # TODO - remove the Anys here.
 def load_coins() -> dict[str, dict[str, Any]]:
     """ "
