@@ -1,47 +1,37 @@
 from __future__ import annotations
 
-import csv
-import json
 import os
-from collections import defaultdict
 from dataclasses import dataclass
+from typing import Any
 
 import requests
-import yaml
+from dune_client.client import DuneClient
+from dune_client.query import Query
+from dune_client.types import DuneRecord
 
 from duneapi.api import DuneAPI
 from duneapi.types import Address, DuneQuery, Network
 from duneapi.util import open_query
 
 
-# Begin Hack
-class HexInt(int):
-    """
-    This little block is a hack to get the address (as a number) to print without quotes.
-    """
-
-
-# pylint:disable=unused-argument
-def representer(dumper, data):
-    """Yaml Representer for HexInt"""
-    # pylint:disable=consider-using-f-string
-    return yaml.ScalarNode("tag:yaml.org,2002:int", "0x{:040x}".format(data))
-
-
-yaml.add_representer(HexInt, representer)
-# End Hack
-
-
-def load_coins() -> dict[str, dict]:
+def load_coins() -> dict[str, dict[str, Any]]:
     """ "
     Loads and returns coin dictionaries from Coin Paprika via their API.
     Excludes, inactive, new and non "token" types
     """
     entries = requests.get(
+        url="https://api.coinpaprika.com/v1/contracts/eth-ethereum", timeout=10
+    ).json()
+    contract_dict = {}
+    for entry in entries:
+        if entry["type"] == "ERC20" and entry["active"]:
+            # only include ethereum tokens
+            contract_dict[entry["id"]] = entry["address"]
+
+    entries = requests.get(
         url="https://api.coinpaprika.com/v1/coins", timeout=10
     ).json()
     coin_dict = {}
-    contract_dict = {}
     missed = 0
     for entry in entries:
         if entry["type"] == "token" and entry["is_active"]:
@@ -49,7 +39,7 @@ def load_coins() -> dict[str, dict]:
             try:
                 entry["address"] = contract_dict[entry["id"]].lower()
                 coin_dict[entry["address"]] = entry
-            except KeyError as err:
+            except KeyError:
                 missed += 1
                 # print(f"Error with {err}, excluding entry {entry}")
 
@@ -57,10 +47,13 @@ def load_coins() -> dict[str, dict]:
     return coin_dict
 
 
-def write_results(results: list[tuple], path: str, filename: str):
+def write_results(
+    results: list[tuple[Any, str, Any, Any, int]], path: str, filename: str
+) -> None:
+    """Writes results to file"""
     if not os.path.exists(path):
         os.makedirs(path)
-    with open(os.path.join(path, filename), "w") as file:
+    with open(os.path.join(path, filename), "w", encoding="utf-8") as file:
         for row in results:
             file.write(str(row) + ",\n")
         print(f"Results written to {filename}")
@@ -94,22 +87,21 @@ class CoinPaprikaToken:
             f"popularity={self.popularity})"
         )
 
-    def as_dune_repr(self, coin_id: str) -> dict:
+    def as_dune_repr(self, coin_id: str) -> dict[str, Any]:
         """Dune YAML representation of CPToken"""
         return {
             # dune uses the snake case id as the name
             "name": coin_id.replace("-", "_"),
             "id": coin_id,
             "symbol": self.symbol,
-            "address": HexInt(int(str(self.address), 16)),
+            "address": str(self.address),
             "decimals": self.decimals,
         }
 
 
-def load_tokens(path: str):
-    with open(path, encoding="utf-8") as csv_f:
-        reader = csv.DictReader(csv_f)
-        return [row for row in reader]
+def load_tokens(dune: DuneClient) -> list[DuneRecord]:
+    """Loads Tokens with missing prices from Dune"""
+    return dune.refresh(Query(query_id=1317238, name="Tokens with Missing Prices"))
 
 
 def fetch_tokens_without_prices(dune: DuneAPI) -> list[CoinPaprikaToken]:
@@ -124,20 +116,20 @@ def fetch_tokens_without_prices(dune: DuneAPI) -> list[CoinPaprikaToken]:
     return [CoinPaprikaToken.from_dict(r) for r in results]
 
 
-def run_missing_prices():
+def run_missing_prices() -> None:
     """Script's Main Entry Point"""
     print("Getting Coin Paprika token list")
     coins = load_coins()
     print(f"Loaded {len(coins)} coins from Coin Paprika")
 
-    tokens = load_tokens("out/missing-token-prices.csv")
+    tokens = load_tokens(DuneClient(api_key=os.environ["DUNE_API_KEY"]))
     print(f"Fetched {len(tokens)} traded tokens from Dune without prices")
     found, res = 0, []
     for token in tokens:
         if token["address"].lower() in coins:
             paprika_data = coins[token["address"].lower()]
             dune_row = (
-                paprika_data["id"],
+                str(paprika_data["id"]),
                 "ethereum",
                 paprika_data["symbol"],
                 paprika_data["address"].lower(),
