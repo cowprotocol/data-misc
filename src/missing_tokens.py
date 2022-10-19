@@ -26,7 +26,9 @@ class DuneVersion(Enum):
 class TokenDetails:
     def __init__(self, address: Address):
         self.address = Web3.toChecksumAddress(address.address)
-        if self.address == Web3.toChecksumAddress("0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"):
+        if self.address == Web3.toChecksumAddress(
+            "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+        ):
             self.symbol = "ETH"
             self.decimals = 18
         else:
@@ -34,7 +36,7 @@ class TokenDetails:
             self.symbol = token_contract.caller.symbol()
             self.decimals = token_contract.caller.decimals()
 
-    def to_str(self, version: DuneVersion):
+    def to_str(self, version: DuneVersion) -> str:
         if version == DuneVersion.V1:
             self.as_v1_string()
         if version == DuneVersion.V2:
@@ -77,7 +79,7 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
     query = DuneQuery(
         name="V2: Missing Tokens",
         query_id=1403073,
-        params=[QueryParameter.enum_type("Blockchain", network.dune_v2_repr())],
+        params=[QueryParameter.enum_type("Blockchain", network.as_dune_v2_repr())],
     )
     print(f"Fetching V2 missing tokens for {network} from {query.url()}")
     v2_missing = dune.refresh(query)
@@ -98,7 +100,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     chain: Network = args.network
-    w3 = Web3(Web3.HTTPProvider(chain.node_url()))
+    w3 = Web3(Web3.HTTPProvider(chain.node_url))
 
     missing_tokens = MissingTokenResults(
         v1=fetch_missing_tokens_legacy(DuneClient(os.environ["DUNE_API_KEY"]), chain),
