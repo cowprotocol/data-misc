@@ -31,7 +31,7 @@ yaml.add_representer(HexInt, representer)
 
 
 def load_coins() -> dict[str, list[dict]]:
-    """"
+    """ "
     Loads and returns coin dictionaries from Coin Paprika via their API.
     Excludes, inactive, new and non "token" types
     """
@@ -53,7 +53,7 @@ def write_results(results: list[dict], path: str, filename: str):
     """
     if not os.path.exists(path):
         os.makedirs(path)
-    with open(os.path.join(path, filename), "w", encoding='utf-8') as yaml_file:
+    with open(os.path.join(path, filename), "w", encoding="utf-8") as yaml_file:
         yaml.dump(
             data=results, stream=yaml_file, default_flow_style=False, sort_keys=False
         )

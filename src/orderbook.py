@@ -1,3 +1,4 @@
+# type: ignore
 import time
 
 import pandas as pd
@@ -15,6 +16,7 @@ from sqlalchemy import (
     func,
     case,
 )
+
 # TODO - I find it strange that LegacyCursor is still being returned...
 from sqlalchemy.engine import LegacyCursorResult
 
@@ -194,8 +196,8 @@ def order_fill_time(db: engine, dune: DuneAPI):
     start = pd.to_datetime(joined_df.creation_timestamp)
     end = pd.to_datetime(joined_df.block_time)
     joined_df["wait_time"] = (
-                                     end - start
-                             ).dt.seconds * 60  # / np.timedelta64(1, "s")  # .dt.seconds / 60
+        end - start
+    ).dt.seconds * 60  # / np.timedelta64(1, "s")  # .dt.seconds / 60
     sorted_df = joined_df.sort_values(by=["wait_time"], ascending=False)
     # Exclude negative wait times (two different clocks)
     sorted_df = sorted_df[sorted_df.wait_time > 0]

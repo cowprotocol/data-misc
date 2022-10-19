@@ -65,6 +65,7 @@ class MissingTokenResults:
     Dataclass holding list of missing tokens per Dune Engine
     This allows us to avoid redundant EVM calls when the two lists overlap.
     """
+
     v1: list[Address]
     v2: list[Address]
 
@@ -140,4 +141,4 @@ if __name__ == "__main__":
     load_dotenv()
     for blockchain in list(Network):
         print(f"Execute on Network {blockchain}")
-        run(chain=blockchain)
+        run_missing_tokens(chain=blockchain)

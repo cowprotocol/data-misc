@@ -3,7 +3,9 @@ import os
 import click
 import pandas as pd
 from dotenv import load_dotenv
+from eth_typing import HexStr
 from web3 import Web3
+from web3.types import TxReceipt
 
 from src.db.pg_client import pg_engine
 
@@ -37,13 +39,14 @@ def main(batch_tx_hash: str) -> int:
     w3 = Web3(
         Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}")
     )
-    tx = w3.eth.get_transaction_receipt(batch_tx_hash)
+    tx: TxReceipt = w3.eth.get_transaction_receipt(HexStr(batch_tx_hash))
+    gas_used = tx["gasUsed"]
     print(
         f"Trades executed individually would have cost {df_quotes['gas_amount'].sum():.0f} gas."
     )
-    print(f"Batch only used {tx.gasUsed} gas.")
+    print(f"Batch only used {gas_used} gas.")
     sum_gas = df_quotes["gas_amount"].sum()
-    gas_saved = sum_gas - tx.gasUsed
+    gas_saved = sum_gas - gas_used
     decrease = (gas_saved / sum_gas) * 100
     print(
         f"This resulted in {gas_saved:.0f} absolute gas saved and {decrease:.2f}% decrease of gas."
