@@ -119,10 +119,13 @@ class CoinsSchema(fields.Dict):
     """CoinsSchema for containing multiple coinschema-s"""
     @staticmethod
     def _get_obj(obj, _attr, _default):
+        """Accessor for the dump method"""
         return obj
 
     def dump(self, obj: Any):
+        """Serializes data"""
         return self.serialize("", obj, accessor=self._get_obj)
 
     def load(self, data: Mapping[str, Any]):
+        """Loads data into mapping"""
         return self.deserialize(data)
