@@ -3,9 +3,10 @@ import json
 import os
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Mapping
 
 from duneapi.types import Network as LegacyDuneNetwork
+from marshmallow import fields, Schema
 
 
 def partition_array(arr: list[Any], size: int) -> list[list[Any]]:
@@ -79,3 +80,45 @@ class Network(Enum):
         Aligned with https://chainlist.org/
         """
         return {Network.MAINNET: 1, Network.GNOSIS: 100}[self]
+
+
+class LoweredString(fields.String):
+    def _deserialize(self, value, *args, **kwargs):
+        if hasattr(value, "lower"):
+            value = value.lower()
+        return super()._deserialize(value, *args, **kwargs)
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        if value is None:
+            return ""
+        return str(value).lower()
+
+
+class TokenSchema(Schema):
+    address = LoweredString(required=True)
+    decimals = fields.Int(required=True)
+    popularity = fields.Int()
+    symbol = fields.String()
+
+
+class CoinSchema(Schema):
+    id = fields.String(required=True)
+    name = fields.String()
+    symbol = fields.String(required=True)
+    rank = fields.Int()
+    is_new = fields.Bool()
+    is_active = fields.Bool()
+    type = fields.String()
+    address = LoweredString(required=True)
+
+
+class CoinsSchema(fields.Dict):
+    @staticmethod
+    def _get_obj(obj, _attr, _default):
+        return obj
+
+    def dump(self, obj: Any):
+        return self.serialize("", obj, accessor=self._get_obj)
+
+    def load(self, data: Mapping[str, Any]):
+        return self.deserialize(data)

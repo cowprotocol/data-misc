@@ -9,17 +9,20 @@ from dotenv import load_dotenv
 from dune_client.client import DuneClient
 from dune_client.query import Query
 from dune_client.types import DuneRecord
+from marshmallow import fields
 
 from duneapi.api import DuneAPI
 from duneapi.types import Address, DuneQuery, Network
 from duneapi.util import open_query
+
+from src.utils import TokenSchema, CoinSchema, CoinsSchema
 
 DuneTokenPriceRow = tuple[str, str, str, str, int]
 
 
 # TODO - remove the Anys here: https://github.com/cowprotocol/data-misc/issues/20
 def load_coins() -> dict[str, dict[str, Any]]:
-    """ "
+    """
     Loads and returns coin dictionaries from Coin Paprika via their API.
     Excludes, inactive, new and non "token" types
     """
@@ -48,7 +51,10 @@ def load_coins() -> dict[str, dict[str, Any]]:
                 # print(f"Error with {err}, excluding entry {entry}")
 
     print(f"Excluded address for {missed} entries out of {len(entries)}")
-    return coin_dict
+    # return coin_dict
+    return CoinsSchema(keys=fields.Str(), values=fields.Nested(CoinSchema)).load(
+        coin_dict
+    )
 
 
 def write_results(results: list[DuneTokenPriceRow], path: str, filename: str) -> None:
@@ -103,7 +109,8 @@ class CoinPaprikaToken:
 
 def load_tokens(dune: DuneClient) -> list[DuneRecord]:
     """Loads Tokens with missing prices from Dune"""
-    return dune.refresh(Query(query_id=1317238, name="Tokens with Missing Prices"))
+    results = dune.refresh(Query(query_id=1317238, name="Tokens with Missing Prices"))
+    return [TokenSchema().load(r) for r in results]
 
 
 def fetch_tokens_without_prices(dune: DuneAPI) -> list[CoinPaprikaToken]:
@@ -128,14 +135,14 @@ def run_missing_prices() -> None:
     print(f"Fetched {len(tokens)} traded tokens from Dune without prices")
     found, res = 0, []
     for token in tokens:
-        if token["address"].lower() in coins:
-            paprika_data = coins[token["address"].lower()]
+        if token["address"] in coins:
+            paprika_data = coins[token["address"]]
             dune_row = (
-                str(paprika_data["id"]),
+                paprika_data["id"],
                 "ethereum",
-                str(paprika_data["symbol"]),
-                str(paprika_data["address"].lower()),
-                int(token["decimals"]),
+                paprika_data["symbol"],
+                paprika_data["address"],
+                token["decimals"],
             )
             res.append(dune_row)
             found += 1
