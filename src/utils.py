@@ -83,6 +83,7 @@ class Network(Enum):
 
 
 class LoweredString(fields.String):
+    """Custom marshmallow String field for lowered string"""
     def _deserialize(self, value, *args, **kwargs):
         if hasattr(value, "lower"):
             value = value.lower()
@@ -95,6 +96,7 @@ class LoweredString(fields.String):
 
 
 class TokenSchema(Schema):
+    """TokenSchema CoinSchema for serializing/deserializing token data"""
     address = LoweredString(required=True)
     decimals = fields.Int(required=True)
     popularity = fields.Int()
@@ -102,6 +104,7 @@ class TokenSchema(Schema):
 
 
 class CoinSchema(Schema):
+    """CoinSchema for serializing/deserializing coin data"""
     id = fields.String(required=True)
     name = fields.String()
     symbol = fields.String(required=True)
@@ -113,6 +116,7 @@ class CoinSchema(Schema):
 
 
 class CoinsSchema(fields.Dict):
+    """CoinsSchema for containing multiple coinschema-s"""
     @staticmethod
     def _get_obj(obj, _attr, _default):
         return obj
