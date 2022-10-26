@@ -104,6 +104,7 @@ class EthereumAddress(fields.Field):
 @dataclass
 class Token:
     """Dataclass for holding Token data"""
+
     address: Address
     decimals: int
     symbol: str
@@ -113,6 +114,7 @@ class Token:
 @dataclass
 class Coin:
     """Dataclass for holding Coin data"""
+
     id: str
     name: str
     symbol: str
