@@ -19,7 +19,6 @@ from src.utils import TokenSchema, CoinSchema, CoinsSchema, Token, EthereumAddre
 DuneTokenPriceRow = tuple[str, str, str, Address, int]
 
 
-# TODO - remove the Anys here: https://github.com/cowprotocol/data-misc/issues/20
 def load_coins() -> dict[Address, Coin]:
     """
     Loads and returns coin dictionaries from Coin Paprika via their API.
@@ -52,7 +51,6 @@ def load_coins() -> dict[Address, Coin]:
                     continue
             except KeyError:
                 missed += 1
-                # print(f"Error with {err}, excluding entry {entry}")
 
     print(f"Excluded address for {missed} entries out of {len(entries)}")
     return CoinsSchema(keys=EthereumAddress, values=fields.Nested(CoinSchema)).load(
@@ -66,7 +64,7 @@ def write_results(results: list[DuneTokenPriceRow], path: str, filename: str) ->
         os.makedirs(path)
     with open(os.path.join(path, filename), "w", encoding="utf-8") as file:
         for row in results:
-            file.write(str(row) + ",\n")
+            file.write(f"('{row[0]}', '{row[1]}', '{row[2]}', '{row[3]}', {row[4]}),\n")
         print(f"Results written to {filename}")
 
 
