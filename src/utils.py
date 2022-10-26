@@ -140,6 +140,9 @@ class TokenSchema(Schema):
 class CoinSchema(Schema):
     """CoinSchema for serializing/deserializing coin data"""
 
+    # pylint: disable=too-many-instance-attributes
+    # Eight are passed from the API
+
     id = fields.String(required=True)
     name = fields.String()
     symbol = fields.String(required=True)
