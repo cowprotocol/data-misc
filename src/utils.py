@@ -3,12 +3,12 @@ import json
 import os
 from datetime import datetime
 from enum import Enum
-from typing import Any, Mapping
+from typing import Any
 from dataclasses import dataclass
 
 from duneapi.types import Network as LegacyDuneNetwork
-from marshmallow import fields, Schema, post_load, ValidationError
 from duneapi.types import Address
+from marshmallow import fields, Schema, post_load, ValidationError
 
 
 def partition_array(arr: list[Any], size: int) -> list[list[Any]]:
@@ -103,6 +103,7 @@ class EthereumAddress(fields.Field):
 
 @dataclass
 class Token:
+    """Dataclass for holding Token data"""
     address: Address
     decimals: int
     symbol: str
@@ -111,6 +112,7 @@ class Token:
 
 @dataclass
 class Coin:
+    """Dataclass for holding Coin data"""
     id: str
     name: str
     symbol: str
@@ -130,7 +132,8 @@ class TokenSchema(Schema):
     symbol = fields.String()
 
     @post_load
-    def make_user(self, data, **kwargs):
+    def make_token(self, data, **_kwargs):
+        """Turns Token data into Token instance"""
         return Token(**data)
 
 
@@ -153,7 +156,8 @@ class CoinSchema(Schema):
             return e.valid_data
 
     @post_load
-    def make_user(self, data, **kwargs):
+    def make_coin(self, data, **_kwargs):
+        """Turns Coin data into Coin instance"""
         return Coin(**data)
 
 

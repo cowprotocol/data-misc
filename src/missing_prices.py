@@ -47,7 +47,7 @@ def load_coins() -> dict[Address, Coin]:
                 try:
                     # coin_dict[Address(entry["address"])] = entry
                     coin_dict[entry["address"]] = entry
-                except ValueError as e:
+                except ValueError:
                     print(f"{entry['address']} is not a valid ethereum address")
                     continue
             except KeyError:
