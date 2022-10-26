@@ -64,6 +64,7 @@ def write_results(results: list[DuneTokenPriceRow], path: str, filename: str) ->
         os.makedirs(path)
     with open(os.path.join(path, filename), "w", encoding="utf-8") as file:
         for row in results:
+            # TODO: [duneapi#68] Fix __repr__ of duneapi.types.Address
             file.write(f"('{row[0]}', '{row[1]}', '{row[2]}', '{row[3]}', {row[4]}),\n")
         print(f"Results written to {filename}")
 
