@@ -4,9 +4,11 @@ import os
 from datetime import datetime
 from enum import Enum
 from typing import Any, Mapping
+from dataclasses import dataclass
 
 from duneapi.types import Network as LegacyDuneNetwork
-from marshmallow import fields, Schema
+from marshmallow import fields, Schema, post_load, ValidationError
+from duneapi.types import Address
 
 
 def partition_array(arr: list[Any], size: int) -> list[list[Any]]:
@@ -82,27 +84,54 @@ class Network(Enum):
         return {Network.MAINNET: 1, Network.GNOSIS: 100}[self]
 
 
-class LoweredString(fields.String):
-    """Custom marshmallow String field for lowered string"""
-
-    def _deserialize(self, value, *args, **kwargs):
-        if hasattr(value, "lower"):
-            value = value.lower()
-        return super()._deserialize(value, *args, **kwargs)
+class EthereumAddress(fields.Field):
+    """Field that serializes to a string of numbers and deserializes
+    to a list of numbers.
+    """
 
     def _serialize(self, value, attr, obj, **kwargs):
         if value is None:
             return ""
-        return str(value).lower()
+        return f"{value}".lower()
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        try:
+            return Address(value)
+        except ValueError as error:
+            raise ValidationError("Not a valid address") from error
+
+
+@dataclass
+class Token:
+    address: Address
+    decimals: int
+    symbol: str
+    popularity: int
+
+
+@dataclass
+class Coin:
+    id: str
+    name: str
+    symbol: str
+    rank: int
+    is_new: bool
+    is_active: bool
+    type: str
+    address: Address
 
 
 class TokenSchema(Schema):
     """TokenSchema CoinSchema for serializing/deserializing token data"""
 
-    address = LoweredString(required=True)
+    address = EthereumAddress(required=True)
     decimals = fields.Int(required=True)
     popularity = fields.Int()
     symbol = fields.String()
+
+    @post_load
+    def make_user(self, data, **kwargs):
+        return Token(**data)
 
 
 class CoinSchema(Schema):
@@ -115,11 +144,21 @@ class CoinSchema(Schema):
     is_new = fields.Bool()
     is_active = fields.Bool()
     type = fields.String()
-    address = LoweredString(required=True)
+    address = EthereumAddress(required=True)
+
+    def load(self, *args, **kwargs):
+        try:
+            return super().load(*args, **kwargs)
+        except ValidationError as e:
+            return e.valid_data
+
+    @post_load
+    def make_user(self, data, **kwargs):
+        return Coin(**data)
 
 
 class CoinsSchema(fields.Dict):
-    """CoinsSchema for containing multiple coinschema-s"""
+    """CoinsSchema for containing multiple Coinschema-s"""
 
     @staticmethod
     def _get_obj(obj, _attr, _default):
@@ -130,6 +169,9 @@ class CoinsSchema(fields.Dict):
         """Serializes data"""
         return self.serialize("", obj, accessor=self._get_obj)
 
-    def load(self, data: Mapping[str, Any]):
+    def load(self, data: dict[Address, Any]):
         """Loads data into mapping"""
-        return self.deserialize(data)
+        try:
+            return self.deserialize(data)
+        except ValidationError as e:
+            return e.valid_data
