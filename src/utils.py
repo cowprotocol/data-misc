@@ -4,8 +4,11 @@ import os
 from datetime import datetime
 from enum import Enum
 from typing import Any
+from dataclasses import dataclass
 
 from duneapi.types import Network as LegacyDuneNetwork
+from duneapi.types import Address
+from marshmallow import fields, Schema, post_load, ValidationError
 
 
 def partition_array(arr: list[Any], size: int) -> list[list[Any]]:
@@ -79,3 +82,105 @@ class Network(Enum):
         Aligned with https://chainlist.org/
         """
         return {Network.MAINNET: 1, Network.GNOSIS: 100}[self]
+
+
+class EthereumAddress(fields.Field):
+    """Field that serializes to a string of numbers and deserializes
+    to a list of numbers.
+    """
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        if value is None:
+            return ""
+        return f"{value}".lower()
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        try:
+            return Address(value)
+        except ValueError as error:
+            raise ValidationError("Not a valid address") from error
+
+
+@dataclass
+class Token:
+    """Dataclass for holding Token data"""
+
+    address: Address
+    decimals: int
+    symbol: str
+    popularity: int
+
+
+@dataclass
+class Coin:
+    """Dataclass for holding Coin data"""
+
+    id: str
+    name: str
+    symbol: str
+    rank: int
+    is_new: bool
+    is_active: bool
+    type: str
+    address: Address
+
+
+class TokenSchema(Schema):
+    """TokenSchema CoinSchema for serializing/deserializing token data"""
+
+    address = EthereumAddress(required=True)
+    decimals = fields.Int(required=True)
+    popularity = fields.Int()
+    symbol = fields.String()
+
+    @post_load
+    def make_token(self, data, **_kwargs):
+        """Turns Token data into Token instance"""
+        return Token(**data)
+
+
+class CoinSchema(Schema):
+    """CoinSchema for serializing/deserializing coin data"""
+
+    # pylint: disable=too-many-instance-attributes
+    # Eight are passed from the API
+
+    id = fields.String(required=True)
+    name = fields.String()
+    symbol = fields.String(required=True)
+    rank = fields.Int()
+    is_new = fields.Bool()
+    is_active = fields.Bool()
+    type = fields.String()
+    address = EthereumAddress(required=True)
+
+    def load(self, *args, **kwargs):
+        try:
+            return super().load(*args, **kwargs)
+        except ValidationError as e:
+            return e.valid_data
+
+    @post_load
+    def make_coin(self, data, **_kwargs):
+        """Turns Coin data into Coin instance"""
+        return Coin(**data)
+
+
+class CoinsSchema(fields.Dict):
+    """CoinsSchema for containing multiple Coinschema-s"""
+
+    @staticmethod
+    def _get_obj(obj, _attr, _default):
+        """Accessor for the dump method"""
+        return obj
+
+    def dump(self, obj: Any):
+        """Serializes data"""
+        return self.serialize("", obj, accessor=self._get_obj)
+
+    def load(self, data: dict[Address, Any]):
+        """Loads data into mapping"""
+        try:
+            return self.deserialize(data)
+        except ValidationError as e:
+            return e.valid_data

@@ -8,18 +8,19 @@ import requests
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
 from dune_client.query import Query
-from dune_client.types import DuneRecord
+from marshmallow import fields
 
 from duneapi.api import DuneAPI
 from duneapi.types import Address, DuneQuery, Network
 from duneapi.util import open_query
 
-DuneTokenPriceRow = tuple[str, str, str, str, int]
+from src.utils import TokenSchema, CoinSchema, CoinsSchema, Token, EthereumAddress, Coin
+
+DuneTokenPriceRow = tuple[str, str, str, Address, int]
 
 
-# TODO - remove the Anys here: https://github.com/cowprotocol/data-misc/issues/20
-def load_coins() -> dict[str, dict[str, Any]]:
-    """ "
+def load_coins() -> dict[Address, Coin]:
+    """
     Loads and returns coin dictionaries from Coin Paprika via their API.
     Excludes, inactive, new and non "token" types
     """
@@ -42,13 +43,19 @@ def load_coins() -> dict[str, dict[str, Any]]:
             # only include ethereum tokens
             try:
                 entry["address"] = contract_dict[entry["id"]].lower()
-                coin_dict[entry["address"]] = entry
+                try:
+                    # coin_dict[Address(entry["address"])] = entry
+                    coin_dict[entry["address"]] = entry
+                except ValueError:
+                    print(f"{entry['address']} is not a valid ethereum address")
+                    continue
             except KeyError:
                 missed += 1
-                # print(f"Error with {err}, excluding entry {entry}")
 
     print(f"Excluded address for {missed} entries out of {len(entries)}")
-    return coin_dict
+    return CoinsSchema(keys=EthereumAddress, values=fields.Nested(CoinSchema)).load(
+        coin_dict
+    )
 
 
 def write_results(results: list[DuneTokenPriceRow], path: str, filename: str) -> None:
@@ -57,7 +64,8 @@ def write_results(results: list[DuneTokenPriceRow], path: str, filename: str) ->
         os.makedirs(path)
     with open(os.path.join(path, filename), "w", encoding="utf-8") as file:
         for row in results:
-            file.write(str(row) + ",\n")
+            # TODO: [duneapi#68] Fix __repr__ of duneapi.types.Address
+            file.write(f"('{row[0]}', '{row[1]}', '{row[2]}', '{row[3]}', {row[4]}),\n")
         print(f"Results written to {filename}")
 
 
@@ -101,9 +109,10 @@ class CoinPaprikaToken:
         }
 
 
-def load_tokens(dune: DuneClient) -> list[DuneRecord]:
+def load_tokens(dune: DuneClient) -> list[Token]:
     """Loads Tokens with missing prices from Dune"""
-    return dune.refresh(Query(query_id=1317238, name="Tokens with Missing Prices"))
+    results = dune.refresh(Query(query_id=1317238, name="Tokens with Missing Prices"))
+    return [TokenSchema().load(r) for r in results]
 
 
 def fetch_tokens_without_prices(dune: DuneAPI) -> list[CoinPaprikaToken]:
@@ -128,14 +137,14 @@ def run_missing_prices() -> None:
     print(f"Fetched {len(tokens)} traded tokens from Dune without prices")
     found, res = 0, []
     for token in tokens:
-        if token["address"].lower() in coins:
-            paprika_data = coins[token["address"].lower()]
+        if token.address in coins:
+            paprika_data = coins[token.address]
             dune_row = (
-                str(paprika_data["id"]),
+                paprika_data.id,
                 "ethereum",
-                str(paprika_data["symbol"]),
-                str(paprika_data["address"].lower()),
-                int(token["decimals"]),
+                paprika_data.symbol,
+                paprika_data.address,
+                token.decimals,
             )
             res.append(dune_row)
             found += 1
