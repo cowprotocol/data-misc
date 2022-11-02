@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
-from typing import List
+from typing import List, Any
 from datetime import datetime
 
 import click
-import duneapi.api
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
 from dune_client.models import ResultsResponse
@@ -18,14 +17,30 @@ from tqdm import tqdm
 @click.command()
 @click.option("--query", "-q", multiple=True)
 @click.option("--start-date", "-s", type=click.DateTime(formats=["%Y-%m-%d"]))
-def main(query: List[str], start_date: datetime):
+def main(query: List[str], start_date: datetime) -> Any:
+    """
+    Main function of the script
+    Args:
+        query: List of queries to fetch
+        start_date: start_date query parameter
+
+    Returns:
+
+    """
     monthly_reporting(query, start_date)
     return 0
 
 
 def store_results(results: List[ResultsResponse], start_date: datetime):
+    """
+    Store results into xlsx file
+    Args:
+        results: results to be stored
+        start_date: start_date query parameter
+    """
     writer = pd.ExcelWriter(
-        f'out/{"_".join([str(x.query_id) for x in results])}_{start_date.strftime("%Y-%m-%d")}.xlsx',
+        f'out/{"_".join([str(x.query_id) for x in results])}'
+        f'_{start_date.strftime("%Y-%m-%d")}.xlsx',
         engine="xlsxwriter",
     )
     for result in results:
@@ -36,6 +51,15 @@ def store_results(results: List[ResultsResponse], start_date: datetime):
 
 
 def fetch_results(queries: List[str], start_date: datetime) -> List[ResultsResponse]:
+    """
+    Fetches results from Dune
+    Args:
+        queries: List of queries to fetch
+        start_date: start_date query parameter
+
+    Returns:
+        List[ResultsResponse]
+    """
     dune_client: DuneClient = DuneClient(os.environ["DUNE_API_KEY"])
     results: List[ResultsResponse] = []
     for q in tqdm(queries):
@@ -51,6 +75,12 @@ def fetch_results(queries: List[str], start_date: datetime) -> List[ResultsRespo
 
 
 def monthly_reporting(queries: List[str], start_date: datetime) -> None:
+    """
+    Fetches and stores results from list of input queries.
+    Args:
+        queries: List of queries to fetch
+        start_date: start_date query parameter
+    """
     results = fetch_results(queries, start_date)
     store_results(results, start_date)
 
