@@ -86,7 +86,7 @@ def fetch_missing_tokens_legacy(dune: DuneClient, network: Network) -> list[Addr
     )
     print(f"Fetching V1 missing tokens for {network} from {query.url()}")
     v1_missing = dune.refresh(query)
-    return [Address(row["token"]) for row in v1_missing]
+    return [Address(row["token"]) for row in v1_missing.result.rows]
 
 
 def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
@@ -99,7 +99,7 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
     print(f"Fetching V2 missing tokens for {network} from {query.url()}")
     v2_missing = dune.refresh(query)
 
-    return [Address(row["token"]) for row in v2_missing]
+    return [Address(row["token"]) for row in v2_missing.result.rows]
 
 
 def run_missing_tokens(chain: Network) -> None:
