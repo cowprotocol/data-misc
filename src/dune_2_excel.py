@@ -30,7 +30,7 @@ def store_results(results: List[ResultsResponse], start_date: datetime):
     )
     for result in results:
         pd.DataFrame(pd.DataFrame(result.result.rows)).to_excel(
-            writer, sheet_name=f"{result.query_id}"
+            writer, sheet_name=f"{result.query_id}", index=False
         )
     writer.close()
 
