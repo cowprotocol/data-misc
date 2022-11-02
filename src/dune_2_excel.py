@@ -31,14 +31,14 @@ def main(query: List[str], start_date: datetime) -> Any:
     return 0
 
 
-def store_results(results: List[ResultsResponse], start_date: datetime):
+def store_results(results: List[ResultsResponse], start_date: datetime) -> None:
     """
     Store results into xlsx file
     Args:
         results: results to be stored
         start_date: start_date query parameter
     """
-    writer = pd.ExcelWriter(
+    writer = pd.ExcelWriter(  # pylint: disable=abstract-class-instantiated
         f'out/{"_".join([str(x.query_id) for x in results])}'
         f'_{start_date.strftime("%Y-%m-%d")}.xlsx',
         engine="xlsxwriter",
