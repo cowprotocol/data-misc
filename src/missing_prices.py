@@ -112,7 +112,7 @@ class CoinPaprikaToken:
 def load_tokens(dune: DuneClient) -> list[Token]:
     """Loads Tokens with missing prices from Dune"""
     results = dune.refresh(Query(query_id=1317238, name="Tokens with Missing Prices"))
-    return [TokenSchema().load(r) for r in results]
+    return [TokenSchema().load(r) for r in results.get_rows()]
 
 
 def fetch_tokens_without_prices(dune: DuneAPI) -> list[CoinPaprikaToken]:
