@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 import os
 from typing import List, Any
 from datetime import datetime
@@ -13,21 +11,23 @@ from dune_client.types import QueryParameter
 import pandas as pd
 from tqdm import tqdm
 
+from src.constants import PROJECT_ROOT
+
 
 @click.command()
-@click.option("--query", "-q", multiple=True)
+@click.option("--query", "-q", "queries_", multiple=True)
 @click.option("--start-date", "-s", type=click.DateTime(formats=["%Y-%m-%d"]))
-def main(query: List[str], start_date: datetime) -> Any:
+def main(queries_: List[str], start_date: datetime) -> Any:
     """
     Main function of the script
     Args:
-        query: List of queries to fetch
+        queries_: List of queries to fetch
         start_date: start_date query parameter
 
     Returns:
 
     """
-    monthly_reporting(query, start_date)
+    monthly_reporting(queries_, start_date)
     return 0
 
 
@@ -39,12 +39,12 @@ def store_results(results: List[ResultsResponse], start_date: datetime) -> None:
         start_date: start_date query parameter
     """
     writer = pd.ExcelWriter(  # pylint: disable=abstract-class-instantiated
-        f'out/{"_".join([str(x.query_id) for x in results])}'
+        PROJECT_ROOT / f'out/{"_".join([str(x.query_id) for x in results])}'
         f'_{start_date.strftime("%Y-%m-%d")}.xlsx',
         engine="xlsxwriter",
     )
     for result in results:
-        pd.DataFrame(pd.DataFrame(result.result.rows)).to_excel(
+        pd.DataFrame(result.get_rows()).to_excel(
             writer, sheet_name=f"{result.query_id}", index=False
         )
     writer.close()
@@ -62,6 +62,7 @@ def fetch_results(queries: List[str], start_date: datetime) -> List[ResultsRespo
     """
     dune_client: DuneClient = DuneClient(os.environ["DUNE_API_KEY"])
     results: List[ResultsResponse] = []
+    # TODO: Make fetching of queries asynchronous #24
     for q in tqdm(queries):
         query = Query(
             name="",
@@ -69,7 +70,7 @@ def fetch_results(queries: List[str], start_date: datetime) -> List[ResultsRespo
             params=[QueryParameter.date_type("StartTime", start_date)],
         )
         result = dune_client.refresh(query)
-        results.append(result.get_rows())
+        results.append(result)
 
     return results
 
