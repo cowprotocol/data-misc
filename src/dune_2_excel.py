@@ -69,7 +69,7 @@ def fetch_results(queries: List[str], start_date: datetime) -> List[ResultsRespo
             params=[QueryParameter.date_type("StartTime", start_date)],
         )
         result = dune_client.refresh(query)
-        results.append(result)
+        results.append(result.get_rows())
 
     return results
 
