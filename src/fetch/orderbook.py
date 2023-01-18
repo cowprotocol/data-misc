@@ -53,12 +53,13 @@ class OrderbookFetcher:
         """
         Fetches and validates Orderbook Reward DataFrame as concatenation from Prod and Staging DB
         """
-        cow_reward_query = """
+        query = """
         select replace(lower(uid::text), '\\x', '0x') as uid,
                date_part('epoch', creation_timestamp)::integer as creation_time
         from trades
-        inner join orders
+        inner join orders o
           on uid = order_uid
+        where o.fee_amount > 0 
         """
-        barn, prod = cls._query_both_dbs(cow_reward_query)
+        barn, prod = cls._query_both_dbs(query)
         return pd.concat([prod, barn])
