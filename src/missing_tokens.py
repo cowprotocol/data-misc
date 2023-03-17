@@ -86,7 +86,6 @@ def fetch_missing_tokens_legacy(dune: DuneClient, network: Network) -> list[Addr
     )
     print(f"Fetching V1 missing tokens for {network} from {query.url()}")
     v1_missing = dune.refresh(query)
-    return []
     return [Address(row["token"]) for row in v1_missing.get_rows()]
 
 
