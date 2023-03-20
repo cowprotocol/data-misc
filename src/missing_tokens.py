@@ -105,9 +105,11 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
 def run_missing_tokens(chain: Network) -> None:
     """Script's main entry point, runs for given network."""
     w3 = Web3(Web3.HTTPProvider(chain.node_url(os.environ["INFURA_KEY"])))
+    client = DuneClient(os.environ["DUNE_API_KEY"])
+    skip_v1 = True  # TODO - make this into runtime parameter (or don't)
     missing_tokens = MissingTokenResults(
-        v1=fetch_missing_tokens_legacy(DuneClient(os.environ["DUNE_API_KEY"]), chain),
-        v2=fetch_missing_tokens(DuneClient(os.environ["DUNE_API_KEY"]), chain),
+        v1=[] if skip_v1 else fetch_missing_tokens_legacy(client, chain),
+        v2=fetch_missing_tokens(client, chain),
     )
 
     if not missing_tokens.is_empty():
@@ -115,24 +117,30 @@ def run_missing_tokens(chain: Network) -> None:
             f"Found {len(missing_tokens.v1)} missing tokens on V1 "
             f"and {len(missing_tokens.v2)} on V2. Fetching token details...\n"
         )
-        token_details = {}
+        token_details, ignored = {}, set()
         for token in missing_tokens.get_all_tokens():
             try:
                 # TODO batch the eth_calls used to construct the token contracts.
                 token_details[token] = TokenDetails(address=token, w3=w3)
             except web3.exceptions.BadFunctionCallOutput:
-                print(f"Something wrong with token {token} - skipping.")
+                ignored.add(token)
+                print(f"BadFunctionCallOutput on {token} - skipping.")
+            except web3.exceptions.ContractLogicError:
+                ignored.add(token)
+                print(f"ContractLogicError on {token} - skipping.")
 
         v1_results = "\n".join(
-            token_details[t].as_v1_string(chain) for t in missing_tokens.v1
+            token_details[t].as_v1_string(chain)
+            for t in missing_tokens.v1
+            if t not in ignored
         )
-        v2_results = "\n".join(
-            token_details[t].as_v2_string() for t in missing_tokens.v2
-        )
-
         print(f"V1 results:\n\n{v1_results}\n")
+        v2_results = "\n".join(
+            token_details[t].as_v2_string()
+            for t in missing_tokens.v2
+            if t not in ignored
+        )
         print(f"V2 results:\n\n{v2_results}\n")
-        # TODO - write to file!
     else:
         print(f"No missing tokens detected on {chain}. Have a good day!")
 
