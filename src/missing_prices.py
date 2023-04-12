@@ -111,12 +111,6 @@ def load_tokens(dune: DuneClient) -> list[Token]:
     return [TokenSchema().load(r) for r in results.get_rows()]
 
 
-# def fetch_tokens_without_prices(dune: DuneClient) -> list[CoinPaprikaToken]:
-#     """Initiates and executes Dune query for affiliate out on given month"""
-#     results = dune.refresh(Query(2359395, name="Traded Tokens without Prices")).get_rows()
-#     return [CoinPaprikaToken.from_dict(r) for r in results]
-
-
 def run_missing_prices() -> None:
     """Script's Main Entry Point"""
     print("Getting Coin Paprika token list")
