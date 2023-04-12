@@ -7,7 +7,7 @@ from typing import Any
 from dataclasses import dataclass
 
 from duneapi.types import Network as LegacyDuneNetwork
-from duneapi.types import Address
+from dune_client.types import Address
 from marshmallow import fields, Schema, post_load, ValidationError
 
 

@@ -8,11 +8,8 @@ import requests
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
 from dune_client.query import Query
+from dune_client.types import Address
 from marshmallow import fields
-
-from duneapi.api import DuneAPI
-from duneapi.types import Address, DuneQuery, Network
-from duneapi.util import open_query
 
 from src.utils import TokenSchema, CoinSchema, CoinsSchema, Token, EthereumAddress, Coin
 
@@ -64,7 +61,6 @@ def write_results(results: list[DuneTokenPriceRow], path: str, filename: str) ->
         os.makedirs(path)
     with open(os.path.join(path, filename), "w", encoding="utf-8") as file:
         for row in results:
-            # TODO: [duneapi#68] Fix __repr__ of duneapi.types.Address
             file.write(f"('{row[0]}', '{row[1]}', '{row[2]}', '{row[3]}', {row[4]}),\n")
         print(f"Results written to {filename}")
 
@@ -111,20 +107,14 @@ class CoinPaprikaToken:
 
 def load_tokens(dune: DuneClient) -> list[Token]:
     """Loads Tokens with missing prices from Dune"""
-    results = dune.refresh(Query(query_id=1317238, name="Tokens with Missing Prices"))
+    results = dune.refresh(Query(query_id=2359395, name="Tokens with Missing Prices"))
     return [TokenSchema().load(r) for r in results.get_rows()]
 
 
-def fetch_tokens_without_prices(dune: DuneAPI) -> list[CoinPaprikaToken]:
-    """Initiates and executes Dune query for affiliate out on given month"""
-    query = DuneQuery.from_environment(
-        raw_sql=open_query("./queries/traded-tokens-without-prices.sql"),
-        name="Traded Tokens Without Prices",
-        network=Network.MAINNET,
-        parameters=[],
-    )
-    results = dune.fetch(query)
-    return [CoinPaprikaToken.from_dict(r) for r in results]
+# def fetch_tokens_without_prices(dune: DuneClient) -> list[CoinPaprikaToken]:
+#     """Initiates and executes Dune query for affiliate out on given month"""
+#     results = dune.refresh(Query(2359395, name="Traded Tokens without Prices")).get_rows()
+#     return [CoinPaprikaToken.from_dict(r) for r in results]
 
 
 def run_missing_prices() -> None:
