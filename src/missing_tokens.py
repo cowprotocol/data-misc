@@ -80,9 +80,7 @@ def run_missing_tokens(chain: Network) -> None:
             token_details[t].as_dune_string()
             for t in missing_tokens
             if t not in ignored
-        )[
-            :-1
-        ]  # slice-off the last comma!
+        )
         print(f"Missing Tokens:\n\n{results}\n")
     else:
         print(f"No missing tokens detected on {chain}. Have a good day!")
