@@ -42,8 +42,12 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
     """Uses Official DuneAPI and to fetch Missing Tokens"""
     query = DuneQuery(
         name="V3: Missing Tokens on {{Blockchain}}",
-        query_id=2359226,
-        params=[QueryParameter.enum_type("Blockchain", network.as_dune_v2_repr())],
+        query_id=2444707,
+        params=[
+            QueryParameter.enum_type("Blockchain", network.as_dune_v2_repr()),
+            QueryParameter.date_type("DateFrom", "2023-01-01 00:00:00"),
+            QueryParameter.number_type("Popularity", 250),
+        ],
     )
     print(f"Fetching missing tokens for {network} from {query.url()}")
     v2_missing = dune.refresh(query, ping_frequency=10)
