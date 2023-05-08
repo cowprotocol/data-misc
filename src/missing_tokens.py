@@ -35,7 +35,7 @@ class TokenDetails:  # pylint:disable=too-few-public-methods
         Example:
           ('0xfcc5c47be19d06bf83eb04298b026f81069ff65b', 'yCRV', 18),
         """
-        return f"('{str(self.address).lower()}', '{self.symbol}', {self.decimals}),"
+        return f",('{str(self.address).lower()}', '{self.symbol}', {self.decimals})"
 
 
 def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
