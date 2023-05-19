@@ -1,0 +1,8 @@
+FROM python:3.11
+
+RUN pip install dune-client web3 python-dotenv
+
+# the only local file
+COPY src/missing_tokens.py src/missing_tokens.py
+
+ENTRYPOINT [ "python3", "-m", "src.missing_tokens"]

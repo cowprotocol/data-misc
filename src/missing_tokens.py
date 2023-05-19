@@ -1,16 +1,63 @@
 import os
 
+from enum import Enum
 import web3.exceptions
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
 from dune_client.query import Query as DuneQuery
-from dune_client.types import QueryParameter
+from dune_client.types import QueryParameter, Address
 
-from duneapi.types import Address
 from web3 import Web3
 
-from src.constants import ERC20_ABI
-from src.utils import Network
+
+class Network(Enum):
+    """
+    Supported chains (generally be a subset of what Dune Supports, but not a hard constraint)
+    """
+
+    MAINNET = "mainnet"
+    GNOSIS = "gnosis"
+
+    def as_dune_v2_repr(self) -> str:
+        """Returns Dune V1 Network String (as compatible with Dune V2 Engine)"""
+        return {Network.MAINNET: "ethereum", Network.GNOSIS: "gnosis"}[self]
+
+    def node_url(self, api_key: str) -> str:
+        """Returns URL to Node for Network"""
+        return {
+            Network.MAINNET: f"https://mainnet.infura.io/v3/{api_key}",
+            Network.GNOSIS: "https://rpc.gnosischain.com",
+        }[self]
+
+    @property
+    def chain_id(self) -> int:
+        """
+        Network's Integer chainID.
+        Aligned with https://chainlist.org/
+        """
+        return {Network.MAINNET: 1, Network.GNOSIS: 100}[self]
+
+
+ERC20_ABI = [
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [{"name": "", "type": "uint8"}],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "symbol",
+        "outputs": [{"name": "", "type": "string"}],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function",
+    },
+]
 
 
 class TokenDetails:  # pylint:disable=too-few-public-methods
@@ -76,7 +123,7 @@ def run_missing_tokens(chain: Network) -> None:
                 ignored.add(token)
                 print(f"ContractLogicError on {token} - skipping.")
 
-        results = "\n".join(
+        results = "\n        ".join(
             token_details[t].as_dune_string()
             for t in missing_tokens
             if t not in ignored
@@ -89,5 +136,5 @@ def run_missing_tokens(chain: Network) -> None:
 if __name__ == "__main__":
     load_dotenv()
     for blockchain in list(Network):
-        print(f"Execute on Network {blockchain}")
+        print(f"Execute on {blockchain}")
         run_missing_tokens(chain=blockchain)

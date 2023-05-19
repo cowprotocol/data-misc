@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Any
 from dataclasses import dataclass
 
-from duneapi.types import Network as LegacyDuneNetwork
 from dune_client.types import Address
 from marshmallow import fields, Schema, post_load, ValidationError
 
@@ -47,41 +46,6 @@ class DuneVersion(Enum):
     V1 = "1"
     # Spark/Hive
     V2 = "2"
-
-
-class Network(Enum):
-    """
-    Supported chains (generally be a subset of what Dune Supports, but not a hard constraint)
-    """
-
-    MAINNET = "mainnet"
-    GNOSIS = "gnosis"
-
-    def as_dune_v1_repr(self) -> LegacyDuneNetwork:
-        """Returns Dune V1 Network Indicator (as compatible with duneapi)"""
-        return {
-            Network.MAINNET: LegacyDuneNetwork.MAINNET,
-            Network.GNOSIS: LegacyDuneNetwork.GCHAIN,
-        }[self]
-
-    def as_dune_v2_repr(self) -> str:
-        """Returns Dune V1 Network String (as compatible with Dune V2 Engine)"""
-        return {Network.MAINNET: "ethereum", Network.GNOSIS: "gnosis"}[self]
-
-    def node_url(self, api_key: str) -> str:
-        """Returns URL to Node for Network"""
-        return {
-            Network.MAINNET: f"https://mainnet.infura.io/v3/{api_key}",
-            Network.GNOSIS: "https://rpc.gnosischain.com",
-        }[self]
-
-    @property
-    def chain_id(self) -> int:
-        """
-        Network's Integer chainID.
-        Aligned with https://chainlist.org/
-        """
-        return {Network.MAINNET: 1, Network.GNOSIS: 100}[self]
 
 
 class EthereumAddress(fields.Field):
