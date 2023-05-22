@@ -24,7 +24,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.repository }}-missing-tokens
           labels: |
             org.opencontainers.image.licenses=MIT OR Apache-2.0
 
