@@ -6,7 +6,9 @@ import shutil
 from datetime import datetime
 
 from duneapi.types import Network as LegacyDuneNetwork
-from src.utils import partition_array, write_to_json, valid_date, Network
+
+from src.missing_tokens import Network
+from src.utils import partition_array, write_to_json, valid_date
 
 
 class MyTestCase(unittest.TestCase):
@@ -50,9 +52,6 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(
             mainnet.node_url("FakeKey"), "https://mainnet.infura.io/v3/FakeKey"
         )
-
-        self.assertEqual(gnosis.as_dune_v1_repr(), LegacyDuneNetwork.GCHAIN)
-        self.assertEqual(mainnet.as_dune_v1_repr(), LegacyDuneNetwork.MAINNET)
 
         self.assertEqual(gnosis.as_dune_v2_repr(), "gnosis")
         self.assertEqual(mainnet.as_dune_v2_repr(), "ethereum")

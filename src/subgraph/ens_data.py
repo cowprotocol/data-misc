@@ -84,6 +84,7 @@ def get_result_page(wallets: list[str], skip: int, block: Optional[int] = None) 
         subgraph_url="https://api.thegraph.com/subgraphs/name/ensdomains/ens",
         query=resolve_query(list(wallets), skip, block),
     )
+    print(result_json)
     return result_json["data"]["domains"]
 
 
