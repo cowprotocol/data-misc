@@ -1,6 +1,9 @@
+import fileinput
 import os
 
 from enum import Enum
+from typing import Optional
+
 import web3.exceptions
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
@@ -102,7 +105,16 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
     return [Address(row["token"]) for row in v2_missing.get_rows()]
 
 
-def run_missing_tokens(chain: Network) -> None:
+def replace_line(old_line: str, new_line: str, file_loc: str):
+    """Overwrites old_line with new_line in file at file_loc"""
+    for line in fileinput.input(file_loc, inplace=True):
+        if line == old_line:
+            print(new_line.rstrip("\n"))
+        else:
+            print(line.rstrip("\n"))
+
+
+def run_missing_tokens(chain: Network, insert_loc: Optional[str] = None) -> None:
     """Script's main entry point, runs for given network."""
     w3 = Web3(Web3.HTTPProvider(chain.node_url(os.environ["INFURA_KEY"])))
     client = DuneClient(os.environ["DUNE_API_KEY"])
@@ -128,13 +140,29 @@ def run_missing_tokens(chain: Network) -> None:
             for t in missing_tokens
             if t not in ignored
         )
-        print(f"Missing Tokens:\n\n{results}\n")
+        if insert_loc:
+            print(f"Writing Tokens to File {insert_loc}")
+            old_line = "     ) AS temp_table (contract_address, symbol, decimals)\n"
+            new_line = "        " + results + "\n" + old_line
+            replace_line(old_line, new_line, insert_loc)
+        else:
+            print(f"Missing Tokens:\n\n{results}\n")
     else:
         print(f"No missing tokens detected on {chain}. Have a good day!")
 
 
 if __name__ == "__main__":
     load_dotenv()
+    spellbook_path = os.environ.get("SPELLBOOK_PATH")
     for blockchain in list(Network):
-        print(f"Execute on {blockchain}")
-        run_missing_tokens(chain=blockchain)
+        chain_name = blockchain.as_dune_v2_repr()
+        print(f"Execute on {chain_name}")
+        token_file = f"models/tokens/{chain_name}/tokens_{chain_name}_erc20.sql"
+        spellbook_file = (
+            os.path.join(spellbook_path, token_file) if spellbook_path else None
+        )
+
+        run_missing_tokens(
+            chain=blockchain,
+            insert_loc=spellbook_file,
+        )
