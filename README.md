@@ -19,7 +19,23 @@ cp .env.sample .env       <----- Copy your Dune credentials here!
 could result in unusual slippage calculations.
 - **Action required**: Create a PR to [Dune Spellbook](https://github.com/duneanalytics/spellbook) with the newest missing tokens data.
 
-Instructions:
+New updated Docker instructions:
+
+1. If you have missing tokens and want to update them, fork [dune/spellbook](https://github.com/duneanalytics/spellbook)
+
+2. Run and have your spellbook automatically updated with the latest missing tokens.
+```shell
+docker run \                                                   
+    -e SPELLBOOK_PATH=$SPELLBOOK_PATH \
+    -e INFURA_KEY=$INFURA_KEY \
+    -e DUNE_API_KEY=$DUNE_API_KEY \
+    -v $SPELLBOOK_PATH:$SPELLBOOK_PATH \
+    ghcr.io/cowprotocol/data-misc-missing-tokens:main
+```
+
+Note that this will require `SPELLBOOK_PATH`, `DUNE_API_KEY` and `INFURA_KEY` variables set.
+
+Step-by-step instructions:
 
 1. Check [V1](https://dune.com/queries/236085) and [V2](https://dune.com/queries/984709) queries for missing tokens.
 2. If you have missing tokens and want to update them, fork [dune/spellbook](https://github.com/duneanalytics/spellbook), 
