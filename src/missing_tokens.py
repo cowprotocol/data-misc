@@ -106,7 +106,7 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
     for row in v2_missing.get_rows():
         try:
             result.append(Address(row["token"]))
-        except:
+        except ValueError:
             print("Cannot add token")
     return result
 
