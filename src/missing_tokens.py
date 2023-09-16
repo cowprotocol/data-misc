@@ -102,7 +102,13 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
     print(f"Fetching missing tokens for {network} from {query.url()}")
     v2_missing = dune.refresh(query, ping_frequency=10)
 
-    return [Address(row["token"]) for row in v2_missing.get_rows()]
+    result = []
+    for row in v2_missing.get_rows():
+        try:
+            result.append(Address(row["token"]))
+        except:
+            print("Cannot add token")
+    return result
 
 
 def replace_line(old_line: str, new_line: str, file_loc: str):
