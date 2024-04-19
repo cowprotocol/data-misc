@@ -25,10 +25,10 @@ class Network(Enum):
         """Returns Dune V1 Network String (as compatible with Dune V2 Engine)"""
         return {Network.MAINNET: "ethereum", Network.GNOSIS: "gnosis"}[self]
 
-    def node_url(self, api_key: str) -> str:
+    def node_url(self) -> str:
         """Returns URL to Node for Network"""
         return {
-            Network.MAINNET: f"https://mainnet.infura.io/v3/{api_key}",
+            Network.MAINNET: "https://rpc.ankr.com/eth",
             Network.GNOSIS: "https://rpc.gnosischain.com",
         }[self]
 
@@ -116,7 +116,7 @@ def replace_line(old_line: str, new_line: str, file_loc: str) -> None:
 
 def run_missing_tokens(chain: Network, insert_loc: Optional[str] = None) -> None:
     """Script's main entry point, runs for given network."""
-    w3 = Web3(Web3.HTTPProvider(chain.node_url(os.environ["INFURA_KEY"])))
+    w3 = Web3(Web3.HTTPProvider(chain.node_url()))
     client = DuneClient(os.environ["DUNE_API_KEY"])
     missing_tokens = fetch_missing_tokens(client, chain)
 

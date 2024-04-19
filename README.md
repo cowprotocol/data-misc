@@ -27,13 +27,12 @@ New updated Docker instructions:
 ```shell
 docker run \                                                   
     -e SPELLBOOK_PATH=$SPELLBOOK_PATH \
-    -e INFURA_KEY=$INFURA_KEY \
     -e DUNE_API_KEY=$DUNE_API_KEY \
     -v $SPELLBOOK_PATH:$SPELLBOOK_PATH \
     ghcr.io/cowprotocol/data-misc-missing-tokens:main
 ```
 
-Note that this will require `SPELLBOOK_PATH`, `DUNE_API_KEY` and `INFURA_KEY` variables set.
+Note that this will require `SPELLBOOK_PATH`, `DUNE_API_KEY` variables set.
 
 Step-by-step instructions:
 
@@ -47,7 +46,7 @@ clone it to your local machine, and create a new branch with
     ```sh 
     python -m src.missing_tokens
     ```
-   Note that this will require a `DUNE_API_KEY` and `INFURA_KEY`. 
+   Note that this will require a `DUNE_API_KEY` 
 This script will print the contents to be inserted in the console.
 4. Results should be inserted into:
    - V1 - `deprecated-dune-v1-abstractions/ethereum/erc20/tokens.sql` 

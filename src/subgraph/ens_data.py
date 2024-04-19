@@ -23,7 +23,7 @@ RELEVANT_FIELDS = {
 }
 
 load_dotenv()
-w3 = Web3(Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}"))
+w3 = Web3(Web3.HTTPProvider("https://rpc.ankr.com/eth"))
 
 
 def read_ens_text(resolver: str, node: str, key: str) -> str:

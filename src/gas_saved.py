@@ -36,9 +36,7 @@ def main(batch_tx_hash: str) -> int:
     # Ref: https://github.com/cowprotocol/services/blob/fd5f7cf47a6afdff89b310b60b869dfc577ac7a7/crates/shared/src/price_estimation/gas.rs#L37
     df_quotes["gas_amount"] = df_quotes["gas_amount"].apply(lambda x: x - 106391)
     load_dotenv()
-    w3 = Web3(
-        Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_KEY']}")
-    )
+    w3 = Web3(Web3.HTTPProvider("https://rpc.ankr.com/eth"))
     tx: TxReceipt = w3.eth.get_transaction_receipt(HexStr(batch_tx_hash))
     gas_used = tx["gasUsed"]
     print(
