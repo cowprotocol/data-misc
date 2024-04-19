@@ -7,7 +7,7 @@ from typing import Optional
 import web3.exceptions
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
-from dune_client.query import Query as DuneQuery
+from dune_client.query import QueryBase as DuneQuery
 from dune_client.types import QueryParameter, Address
 
 from web3 import Web3
@@ -67,8 +67,8 @@ class TokenDetails:  # pylint:disable=too-few-public-methods
     """EVM token Details (including address, symbol, decimals)"""
 
     def __init__(self, address: Address, w3: Web3):
-        self.address = Web3.toChecksumAddress(address.address)
-        if self.address == Web3.toChecksumAddress(
+        self.address = Web3.to_checksum_address(address.address)
+        if self.address == Web3.to_checksum_address(
             "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
         ):
             self.symbol = "ETH"
@@ -83,29 +83,29 @@ class TokenDetails:  # pylint:disable=too-few-public-methods
         Returns Dune Representation of an ERC20 Token:
         https://github.com/duneanalytics/spellbook/blob/main/models/tokens/ethereum/tokens_ethereum_erc20.sql
         Example:
-          ('0xfcc5c47be19d06bf83eb04298b026f81069ff65b', 'yCRV', 18),
+          , ('0xfcc5c47be19d06bf83eb04298b026f81069ff65b', 'yCRV', 18)
         """
-        return f",({str(self.address).lower()}, '{self.symbol}', {self.decimals})"
+        return f", ({str(self.address).lower()}, '{self.symbol}', {self.decimals})"
 
 
 def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
     """Uses Official DuneAPI and to fetch Missing Tokens"""
     query = DuneQuery(
         name="V3: Missing Tokens on {{Blockchain}}",
-        query_id=2444707,
+        query_id=3645484,
         params=[
             QueryParameter.enum_type("Blockchain", network.as_dune_v2_repr()),
             QueryParameter.date_type("DateFrom", "2023-01-01 00:00:00"),
-            QueryParameter.number_type("Popularity", 250),
+            QueryParameter.number_type("Popularity", 100),
         ],
     )
     print(f"Fetching missing tokens for {network} from {query.url()}")
-    v2_missing = dune.refresh(query, ping_frequency=10)
+    v2_missing = dune.run_query(query, ping_frequency=10)
 
     return [Address(row["token"]) for row in v2_missing.get_rows()]
 
 
-def replace_line(old_line: str, new_line: str, file_loc: str):
+def replace_line(old_line: str, new_line: str, file_loc: str) -> None:
     """Overwrites old_line with new_line in file at file_loc"""
     for line in fileinput.input(file_loc, inplace=True):
         if line == old_line:
@@ -135,15 +135,15 @@ def run_missing_tokens(chain: Network, insert_loc: Optional[str] = None) -> None
                 ignored.add(token)
                 print(f"ContractLogicError on {token} - skipping.")
 
-        results = "\n        ".join(
+        results = "\n    ".join(
             token_details[t].as_dune_string()
             for t in missing_tokens
             if t not in ignored
         )
         if insert_loc:
             print(f"Writing Tokens to File {insert_loc}")
-            old_line = "     ) AS temp_table (contract_address, symbol, decimals)\n"
-            new_line = "        " + results + "\n" + old_line
+            old_line = ") AS temp_table (contract_address, symbol, decimals)\n"
+            new_line = "    " + results + "\n" + old_line
             replace_line(old_line, new_line, insert_loc)
         else:
             print(f"Missing Tokens:\n\n{results}\n")
@@ -157,12 +157,12 @@ if __name__ == "__main__":
     for blockchain in list(Network):
         chain_name = blockchain.as_dune_v2_repr()
         print(f"Execute on {chain_name}")
-        token_file = f"models/tokens/{chain_name}/tokens_{chain_name}_erc20.sql"
+        token_file = f"tokens/models/tokens/{chain_name}/tokens_{chain_name}_erc20.sql"
         spellbook_file = (
             os.path.join(spellbook_path, token_file) if spellbook_path else None
         )
 
         run_missing_tokens(
             chain=blockchain,
-            insert_loc=spellbook_file,
+            # insert_loc=spellbook_file,
         )

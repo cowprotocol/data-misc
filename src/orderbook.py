@@ -17,8 +17,7 @@ from sqlalchemy import (
     case,
 )
 
-# TODO - I find it strange that LegacyCursor is still being returned...
-from sqlalchemy.engine import LegacyCursorResult
+from sqlalchemy.engine import CursorResult
 
 from src.db.pg_client import pg_engine
 
@@ -68,7 +67,7 @@ def sql_alchemy_basic(db: engine):
 
     with db.connect() as conn:
         select_statement = invalidation_table.select()
-        result_set: LegacyCursorResult = conn.execute(select_statement)
+        result_set: CursorResult = conn.execute(select_statement)
         for r in result_set:
             print(bin_str(r.order_uid))
 
@@ -117,7 +116,7 @@ def sql_alchemy_advanced(db: engine):
     )
     with db.connect() as conn:
         print("Querying for spam traders having more failed orders than successful")
-        result_set: LegacyCursorResult = conn.execute(select_statement)
+        result_set: CursorResult = conn.execute(select_statement)
         results = result_set.all()
         print(f"Found {len(results)} traders with more failed orders than trades")
         print(list(result_set.keys()))
@@ -143,7 +142,7 @@ def sql_alchemy_advanced(db: engine):
 
     print("Now querying with raw sql")
     with db.connect() as conn:
-        result_set: LegacyCursorResult = conn.execute(raw_query)
+        result_set: CursorResult = conn.execute(raw_query)
         print(f"Found {len(result_set.all())} with raw query")
 
 

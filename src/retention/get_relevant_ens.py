@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from duneapi.api import DuneAPI
 from duneapi.types import DuneQuery, Network, QueryParameter
 from duneapi.util import open_query
-from src.subgraph.ens_data import get_wallet_ens_data
+from src.subgraph.ens_data import get_wallet_ens_data, WalletNameMap
 from src.utils import write_to_json, valid_date
 
 SUBGRAPH_URL = "https://api.thegraph.com/subgraphs/name/ensdomains/ens"
@@ -26,7 +26,7 @@ class RetentionCategory(Enum):
 
 def fetch_retained_users(
     dune: DuneAPI, category: RetentionCategory, day: datetime.datetime
-):
+) -> WalletNameMap:
     """
     Fetches ETH spent on CIP-9 Fee subsidies
     https://snapshot.org/#/cow.eth/proposal/0x4bb9b614bdc4354856c4d0002ad0845b73b5290e5799013192cbc6491e6eea0e

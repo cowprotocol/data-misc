@@ -5,8 +5,6 @@ import unittest
 import shutil
 from datetime import datetime
 
-from duneapi.types import Network as LegacyDuneNetwork
-
 from src.missing_tokens import Network
 from src.utils import partition_array, write_to_json, valid_date
 

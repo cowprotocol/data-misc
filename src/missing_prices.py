@@ -7,7 +7,7 @@ from typing import Any
 import requests
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
-from dune_client.query import Query
+from dune_client.query import QueryBase as Query
 from dune_client.types import Address
 from marshmallow import fields
 

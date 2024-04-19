@@ -28,7 +28,7 @@ w3 = Web3(Web3.HTTPProvider(f"https://mainnet.infura.io/v3/{os.environ['INFURA_K
 
 def read_ens_text(resolver: str, node: str, key: str) -> str:
     resolver_contract = w3.eth.contract(
-        address=Web3.toChecksumAddress(resolver), abi=PUBLIC_RESOLVER_ABI
+        address=Web3.to_checksum_address(resolver), abi=PUBLIC_RESOLVER_ABI
     )
 
     text: str = resolver_contract.caller.text(node, key)
@@ -84,7 +84,6 @@ def get_result_page(wallets: list[str], skip: int, block: Optional[int] = None) 
         subgraph_url="https://api.thegraph.com/subgraphs/name/ensdomains/ens",
         query=resolve_query(list(wallets), skip, block),
     )
-    print(result_json)
     return result_json["data"]["domains"]
 
 

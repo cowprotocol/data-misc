@@ -3,7 +3,7 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 from psycopg2._psycopg import connection
-from sqlalchemy import create_engine, engine
+from sqlalchemy import create_engine, Engine
 
 load_dotenv()
 host = os.environ["ORDERBOOK_HOST"]
@@ -31,7 +31,7 @@ def pg_connect() -> connection:
     )
 
 
-def pg_engine() -> engine:
+def pg_engine() -> Engine:
     return create_engine(db_string())
 
 
