@@ -96,7 +96,7 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
         params=[
             QueryParameter.enum_type("Blockchain", network.as_dune_v2_repr()),
             QueryParameter.date_type("DateFrom", "2023-01-01 00:00:00"),
-            QueryParameter.number_type("Popularity", 100),
+            QueryParameter.number_type("Popularity", 250),
         ],
     )
     print(f"Fetching missing tokens for {network} from {query.url()}")
@@ -164,5 +164,5 @@ if __name__ == "__main__":
 
         run_missing_tokens(
             chain=blockchain,
-            # insert_loc=spellbook_file,
+            insert_loc=spellbook_file,
         )
