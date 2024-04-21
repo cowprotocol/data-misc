@@ -6,7 +6,7 @@ from typing import Optional, Any
 from dotenv import load_dotenv
 from web3 import Web3
 
-from src.constants import PUBLIC_RESOLVER_ABI
+from src.constants import PUBLIC_RESOLVER_ABI, ETH_RPC
 from src.subgraph.fetch import execute_subgraph_query
 from src.utils import partition_array
 
@@ -23,7 +23,7 @@ RELEVANT_FIELDS = {
 }
 
 load_dotenv()
-w3 = Web3(Web3.HTTPProvider("https://rpc.ankr.com/eth"))
+w3 = Web3(Web3.HTTPProvider(ETH_RPC))
 
 
 def read_ens_text(resolver: str, node: str, key: str) -> str:

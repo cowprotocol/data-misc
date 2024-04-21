@@ -46,9 +46,6 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(gnosis.chain_id, 100)
         self.assertEqual(mainnet.chain_id, 1)
 
-        self.assertEqual(gnosis.node_url(), "https://rpc.gnosischain.com")
-        self.assertEqual(mainnet.node_url(), "https://rpc.ankr.com/eth")
-
         self.assertEqual(gnosis.as_dune_v2_repr(), "gnosis")
         self.assertEqual(mainnet.as_dune_v2_repr(), "ethereum")
 

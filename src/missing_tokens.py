@@ -12,6 +12,8 @@ from dune_client.types import QueryParameter, Address
 
 from web3 import Web3
 
+from src.constants import ETH_RPC, GNOSIS_RPC
+
 
 class Network(Enum):
     """
@@ -28,8 +30,8 @@ class Network(Enum):
     def node_url(self) -> str:
         """Returns URL to Node for Network"""
         return {
-            Network.MAINNET: "https://rpc.ankr.com/eth",
-            Network.GNOSIS: "https://rpc.gnosischain.com",
+            Network.MAINNET: ETH_RPC,
+            Network.GNOSIS: GNOSIS_RPC,
         }[self]
 
     @property

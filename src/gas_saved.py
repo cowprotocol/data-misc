@@ -5,6 +5,7 @@ from eth_typing.encoding import HexStr
 from web3 import Web3
 from web3.types import TxReceipt
 
+from src.constants import ETH_RPC
 from src.db.pg_client import pg_engine
 
 
@@ -34,7 +35,7 @@ def main(batch_tx_hash: str) -> int:
     # Ref: https://github.com/cowprotocol/services/blob/fd5f7cf47a6afdff89b310b60b869dfc577ac7a7/crates/shared/src/price_estimation/gas.rs#L37
     df_quotes["gas_amount"] = df_quotes["gas_amount"].apply(lambda x: x - 106391)
     load_dotenv()
-    w3 = Web3(Web3.HTTPProvider("https://rpc.ankr.com/eth"))
+    w3 = Web3(Web3.HTTPProvider(ETH_RPC))
     tx: TxReceipt = w3.eth.get_transaction_receipt(HexStr(batch_tx_hash))
     gas_used = tx["gasUsed"]
     print(
