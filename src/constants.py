@@ -20,4 +20,4 @@ PUBLIC_RESOLVER_ABI = [
 ]
 
 ETH_RPC = os.environ.get("ETH_RPC", "https://rpc.ankr.com/eth")
-GNOSIS_RPC = os.environ.get("ETH_RPC", "https://rpc.gnosischain.com")
+GNOSIS_RPC = os.environ.get("GNOSIS_RPC", "https://rpc.gnosischain.com")
