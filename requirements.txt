@@ -6,7 +6,7 @@ pytest>=8.1.1
 
 # Project
 duneapi==6.0.0
-dune_client>=1.7.0
+dune_client>=1.7.3
 python-dotenv>=0.21.1
 requests>=2.31.0
 web3>=6.17.2
