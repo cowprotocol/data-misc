@@ -28,7 +28,7 @@ class MyTestCase(unittest.TestCase):
                 }
             ],
         }
-        results = get_wallet_ens_data(set(expected_ens_records.keys()), 15687500)
+        results = get_wallet_ens_data(set(expected_ens_records.keys()))
         for wallet, data in expected_ens_records.items():
             self.assertEqual(results[wallet], data, f"failed for wallet {wallet}")
 

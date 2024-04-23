@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 
@@ -17,3 +18,6 @@ PUBLIC_RESOLVER_ABI = [
         "type": "function",
     }
 ]
+
+ETH_RPC = os.environ.get("ETH_RPC", "https://rpc.ankr.com/eth")
+GNOSIS_RPC = os.environ.get("GNOSIS_RPC", "https://rpc.gnosischain.com")

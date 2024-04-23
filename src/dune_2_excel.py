@@ -6,7 +6,7 @@ import click
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
 from dune_client.models import ResultsResponse
-from dune_client.query import Query
+from dune_client.query import QueryBase as Query
 from dune_client.types import QueryParameter
 import pandas as pd
 from tqdm import tqdm
