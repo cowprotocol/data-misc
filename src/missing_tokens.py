@@ -90,7 +90,7 @@ class TokenDetails:  # pylint:disable=too-few-public-methods
         return f", ({str(self.address).lower()}, '{self.symbol}', {self.decimals})"
 
 
-def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
+def fetch_missing_tokens(dune: DuneClient, network: Network, popularity: int) -> list[Address]:
     """Uses Official DuneAPI and to fetch Missing Tokens"""
     query = DuneQuery(
         name="V3: Missing Tokens on {{Blockchain}}",
@@ -98,7 +98,7 @@ def fetch_missing_tokens(dune: DuneClient, network: Network) -> list[Address]:
         params=[
             QueryParameter.enum_type("Blockchain", network.as_dune_v2_repr()),
             QueryParameter.date_type("DateFrom", "2023-01-01 00:00:00"),
-            QueryParameter.number_type("Popularity", 250),
+            QueryParameter.number_type("Popularity", popularity),
         ],
     )
     print(f"Fetching missing tokens for {network} from {query.url()}")
@@ -116,11 +116,11 @@ def replace_line(old_line: str, new_line: str, file_loc: str) -> None:
             print(line.rstrip("\n"))
 
 
-def run_missing_tokens(chain: Network, insert_loc: Optional[str] = None) -> None:
+def run_missing_tokens(chain: Network, insert_loc: Optional[str] = None, popularity: int = 250) -> None:
     """Script's main entry point, runs for given network."""
     w3 = Web3(Web3.HTTPProvider(chain.node_url()))
     client = DuneClient(os.environ["DUNE_API_KEY"])
-    missing_tokens = fetch_missing_tokens(client, chain)
+    missing_tokens = fetch_missing_tokens(client, chain, popularity)
 
     if missing_tokens:
         print(f"Found {len(missing_tokens)} missing tokens. Fetching details...\n")
